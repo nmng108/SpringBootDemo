@@ -1,0 +1,5 @@
+.idea
+target
+mvnw*
+HELP.md
+src/main/resources/application.properties
