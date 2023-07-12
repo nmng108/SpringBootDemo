@@ -2,6 +2,7 @@ package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
 import com.example.demo.Model.DTO.Request.PersonCreationData;
+import com.example.demo.Model.DTO.Request.PersonUpdateForm;
 import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,9 @@ public class PersonServiceImpl implements PersonService {
 
     @Override
     public Person save(PersonCreationData personData) {
+        // TODO: validate data before updating
         // if the identity has existed then response bad request/duplicate
+
         Person newPerson = Person.builder()
                 .name(personData.getName())
                 .identity(personData.getIdentity()).build();
@@ -46,7 +49,27 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public boolean delete(int id) {
+    public boolean updateById(int id, PersonUpdateForm form) {
+        if (!repository.existsById(id)) {
+            return false;
+        }
+
+        // TODO: validate data before updating
+
+        Person modifiedPerson = repository.findById(id).get();
+        if (form.getName() != null) modifiedPerson.setName(form.getName());
+        if (form.getBirthDate() != null) modifiedPerson.setBirthDate(form.getBirthDate());
+        if (form.getHeight() != null) modifiedPerson.setHeight(form.getHeight());
+        if (form.getWeight() != null) modifiedPerson.setWeight(form.getWeight());
+        if (form.getAddress() != null) modifiedPerson.setAddress(form.getAddress());
+        if (form.getIdentity() != null) modifiedPerson.setIdentity(form.getIdentity());
+
+        repository.save(modifiedPerson);
         return true;
+    }
+
+    @Override
+    public void delete(int id) {
+        repository.deleteById(id);
     }
 }

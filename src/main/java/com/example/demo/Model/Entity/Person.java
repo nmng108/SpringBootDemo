@@ -1,11 +1,14 @@
 package com.example.demo.Model.Entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 public @Data class Person {
     @Id
@@ -22,8 +25,6 @@ public @Data class Person {
     @Column(nullable = false)
     private String identity;
 
-    public Person() {}
-
     /**
      * Instantiate with minimum number of data
      * @param identity
@@ -32,15 +33,15 @@ public @Data class Person {
         this.identity = identity;
     }
 
-    public Person(int id, String name, String birthDate, double height, double weight, String address, String identity) {
-        this.id = id;
-        this.name = name;
-        this.birthDate = birthDate;
-        this.height = height;
-        this.weight = weight;
-        this.address = address;
-        this.identity = identity;
-    }
+//    public Person(int id, String name, String birthDate, double height, double weight, String address, String identity) {
+//        this.id = id;
+//        this.name = name;
+//        this.birthDate = birthDate;
+//        this.height = height;
+//        this.weight = weight;
+//        this.address = address;
+//        this.identity = identity;
+//    }
 
 //    @Column(name = "created_at")
 //    private String createdAt;
