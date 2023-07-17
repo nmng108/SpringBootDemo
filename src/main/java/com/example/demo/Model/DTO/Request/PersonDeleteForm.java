@@ -1,8 +1,11 @@
 package com.example.demo.Model.DTO.Request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-public @Data class PersonDeleteForm {
-    private int id;
+@Data
+public class PersonDeleteForm {
+    @NotNull
+    private Integer id;
     private String CSRFToken;
 }

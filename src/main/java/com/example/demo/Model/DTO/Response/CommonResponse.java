@@ -9,7 +9,8 @@ import org.springframework.lang.Nullable;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public @Data class CommonResponse {
+@Data
+public class CommonResponse {
     private boolean success;
     private Object data;
     private Object errors;

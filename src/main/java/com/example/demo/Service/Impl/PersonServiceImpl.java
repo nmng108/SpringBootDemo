@@ -3,11 +3,17 @@ package com.example.demo.Service.Impl;
 import com.example.demo.DAO.PersonRepository;
 import com.example.demo.Model.DTO.Request.PersonCreationData;
 import com.example.demo.Model.DTO.Request.PersonUpdateForm;
+import com.example.demo.Model.DTO.Response.CommonResponse;
 import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.Date;
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -16,60 +22,95 @@ public class PersonServiceImpl implements PersonService {
     private PersonRepository repository;
 
     @Override
-    public List<Person> findAllPersons() {
-        return (List<Person>) repository.findAll(); // any other ways?
+    public ResponseEntity<CommonResponse> findAll() {
+        return ResponseEntity.ok(new CommonResponse(true, (List<Person>) repository.findAll()));
     }
 
     @Override
-    public Person findPersonById(int id) {
-        return repository.findById(id).orElse(null);
+    public ResponseEntity<CommonResponse> findById(int id) {
+        Person person = repository.findById(id).orElse(null);
+
+        if (person == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(new CommonResponse(true, person));
     }
 
     @Override
-    public Person findPersonByIdentity(String identity) {
-//        return repository.findPersonByIdentity(identity);
-        return null;
+    public ResponseEntity<CommonResponse> findByIdentity(String identity) {
+        Person person = repository.findByIdentity(identity);
+
+        if (person == null) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new CommonResponse(true, person));
     }
 
     @Override
-    public Person save(PersonCreationData personData) {
-        // TODO: validate data before updating
-        // if the identity has existed then response bad request/duplicate
+    public ResponseEntity<CommonResponse> save(PersonCreationData requestData) throws URISyntaxException {
+        // check if identity has existed
+        ResponseEntity<CommonResponse> identityCheckResult = checkIfIdentityHasExisted(requestData.getIdentity());
+        if (identityCheckResult != null) return identityCheckResult;
 
         Person newPerson = Person.builder()
-                .name(personData.getName())
-                .identity(personData.getIdentity()).build();
-//        Person newPerson = new Person(personData.getName(), personData.getIdentity());
-//        newPerson.setBirthDate(personData.getBirthDate());
-//        newPerson.setHeight(personData.getHeight());
-//        newPerson.setWeight(personData.getWeight());
-//        newPerson.setAddress(personData.getAddress());
+                .name(requestData.getName())
+                .birthDate(requestData.getBirthDate())
+                .height(requestData.getHeight())
+                .weight(requestData.getWeight())
+                .address(requestData.getAddress())
+                .identity(requestData.getIdentity())
+                .build();
 
-        return repository.save(newPerson);
+        newPerson = repository.save(newPerson);
+
+        return ResponseEntity
+                .created(new URI("/api/persons/" + newPerson.getId()))
+                .body(CommonResponse.builder().success(true).build());
     }
 
     @Override
-    public boolean updateById(int id, PersonUpdateForm form) {
-        if (!repository.existsById(id)) {
-            return false;
+    public ResponseEntity<CommonResponse> updateById(int id, PersonUpdateForm requestData) {
+        Person modifiedPerson = repository.findById(id).orElse(null);
+
+        if (modifiedPerson == null) {
+            return ResponseEntity.notFound().build();
         }
 
-        // TODO: validate data before updating
+        ResponseEntity<CommonResponse> identityCheckResult = checkIfIdentityHasExisted(requestData.getIdentity());
+        if (identityCheckResult != null) return identityCheckResult;
 
-        Person modifiedPerson = repository.findById(id).get();
-        if (form.getName() != null) modifiedPerson.setName(form.getName());
-        if (form.getBirthDate() != null) modifiedPerson.setBirthDate(form.getBirthDate());
-        if (form.getHeight() != null) modifiedPerson.setHeight(form.getHeight());
-        if (form.getWeight() != null) modifiedPerson.setWeight(form.getWeight());
-        if (form.getAddress() != null) modifiedPerson.setAddress(form.getAddress());
-        if (form.getIdentity() != null) modifiedPerson.setIdentity(form.getIdentity());
+        // if not found
+        if (requestData.getName() != null) modifiedPerson.setName(requestData.getName());
+        if (requestData.getBirthDate() != null) modifiedPerson.setBirthDate(
+                Date.valueOf(requestData.getBirthDate())
+        );
+//        if (requestData.getBirthDate() != null) System.out.println(modifiedPerson.getBirthDate());
+        if (requestData.getHeight() != null) modifiedPerson.setHeight(requestData.getHeight());
+        if (requestData.getWeight() != null) modifiedPerson.setWeight(requestData.getWeight());
+        if (requestData.getAddress() != null) modifiedPerson.setAddress(requestData.getAddress());
+        if (requestData.getIdentity() != null) modifiedPerson.setIdentity(requestData.getIdentity());
 
-        repository.save(modifiedPerson);
-        return true;
+        modifiedPerson = repository.save(modifiedPerson);
+
+        return ResponseEntity.ok(CommonResponse.builder().success(true).data(modifiedPerson).build());
     }
 
     @Override
     public void delete(int id) {
         repository.deleteById(id);
+    }
+
+    private ResponseEntity<CommonResponse> checkIfIdentityHasExisted(String identity) {
+        Person existingPerson = repository.findByIdentity(identity);
+
+        if (existingPerson != null) {
+            HashMap<String, String> error = new HashMap<>();
+            error.put("identity", "\"identity\" has existed");
+            HashMap<String, Object> errorMessage = new HashMap<>();
+            errorMessage.put("error_code", "E01");
+            errorMessage.put("details", error);
+
+            return ResponseEntity.badRequest().body(
+                    CommonResponse.builder().success(false).errors(errorMessage).build()
+            );
+        }
+
+        return null;
     }
 }

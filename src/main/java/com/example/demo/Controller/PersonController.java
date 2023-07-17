@@ -4,14 +4,16 @@ import com.example.demo.Model.DTO.Request.PersonDeleteForm;
 import com.example.demo.Model.DTO.Request.PersonCreationData;
 import com.example.demo.Model.DTO.Request.PersonUpdateForm;
 import com.example.demo.Model.DTO.Response.CommonResponse;
-import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.WebRequest;
 
-import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
 
 // may change Person to PersonDTO in responses
 
@@ -22,67 +24,77 @@ public class PersonController {
     private PersonService service;
 
     @GetMapping()
-    public ResponseEntity<CommonResponse> getAll() {
-        return ResponseEntity.ok(new CommonResponse(true, service.findAllPersons()));
+    public ResponseEntity<CommonResponse> getPersons(@RequestParam(required = false) String identity) {
+        if (identity != null) {
+            if (identity.length() < 5 || identity.length() > 15) {
+                return ResponseEntity.badRequest().body(
+                        CommonResponse.builder().success(false).errors("Invalid identity").build()
+                );
+            }
+
+            return service.findByIdentity(identity);
+        }
+
+        return service.findAll();
     }
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<CommonResponse> getPersonById(@PathVariable int id) {
-        Person person = service.findPersonById(id);
-        if (person == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(new CommonResponse(true, person));
+        return service.findById(id);
     }
 
-//    duplicate with the route above; may put identity into body
-//    @GetMapping(name = "/{identity}")
-//    public ResponseEntity<CommonResponse> getPersonByIdentity(@PathVariable String identity) {
-//        return ResponseEntity.ok(new CommonResponse(true, service.findPersonByIdentity(identity)));
-//    }
-
     @PostMapping()
-    public ResponseEntity<CommonResponse> create(@RequestBody PersonCreationData data) {
+    public ResponseEntity<CommonResponse> create(
+            @RequestBody @Valid PersonCreationData data, BindingResult bindingResult
+    ) {
         try {
-            Person newPerson = service.save(data);
-            return newPerson != null ?
-                    ResponseEntity
-                            .created(new URI("/api/persons/" + String.valueOf(newPerson.getId())))
-                            .body(CommonResponse.builder().success(true).build())
-                    :
-                    ResponseEntity
-                            .internalServerError()
-                            .body(CommonResponse.builder().success(false).errors("error while creating").build());
-        } catch (Exception e) {
+            if (bindingResult.hasErrors()) return errorResponse(bindingResult);
+
+            return service.save(data);
+        } catch (URISyntaxException e) {
             e.printStackTrace();
-            return ResponseEntity
-                    .internalServerError()
-                    .body(CommonResponse.builder().success(false).errors("error while creating").build());
+            throw new RuntimeException("URI syntax violated the spec"); // ?
         }
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<CommonResponse> update(@PathVariable int id, @RequestBody PersonUpdateForm form) {
-        try {
-            // some cases may happen and need to be returned by the service function:
-            // 1. id is not found
-            // 2. invalid data
-            // 3. updating has not succeeded (by db connection, ...) (this err will be thrown as exception)
-            boolean hasSucceeded = service.updateById(id, form);
-            CommonResponse response = hasSucceeded ?
-                    CommonResponse.builder().success(true).build()
-                    :
-                    CommonResponse.builder().success(false).errors("error...").build();
-            return ResponseEntity.status(hasSucceeded ? 200 : 400).body(response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity
-                    .status(500)
-                    .body(CommonResponse.builder().success(false).errors("error...").build());
-        }
+    public ResponseEntity<CommonResponse> update(@PathVariable int id,
+                                                 @RequestBody @Valid PersonUpdateForm requestData,
+                                                 BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) return errorResponse(bindingResult);
+
+        return service.updateById(id, requestData);
     }
 
     @DeleteMapping()
-    public ResponseEntity<CommonResponse> deleteById(@RequestBody PersonDeleteForm form) {
+    public ResponseEntity<CommonResponse> deleteById(@RequestBody @Valid PersonDeleteForm form) {
         service.delete(form.getId());
         return ResponseEntity.ok(new CommonResponse(true, "Person with id " + form.getId() + "has been deleted."));
+    }
+
+    private ResponseEntity<CommonResponse> errorResponse(BindingResult bindingResult) {
+        HashMap<String, String> errors = new HashMap<>();
+
+        bindingResult.getFieldErrors().forEach((error) -> {
+            errors.put(error.getField(), error.getDefaultMessage());
+            System.out.println(error);
+        });
+
+        HashMap<String, Object> errorMessage = new HashMap<>();
+        errorMessage.put("error_code", "E00");
+        errorMessage.put("details", errors);
+
+        return ResponseEntity.badRequest().body(
+                CommonResponse.builder().success(false).errors(errorMessage).build()
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<CommonResponse> handleCommonExceptions(WebRequest request, Exception ex) {
+        System.out.println(ex.getLocalizedMessage());
+
+        return ResponseEntity.accepted().body(
+                CommonResponse.builder().errors(ex.getLocalizedMessage()).build()
+        );
     }
 }

@@ -1,10 +1,13 @@
 package com.example.demo.Model.Entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.sql.Date;
 
 @Builder
 @NoArgsConstructor
@@ -14,38 +17,32 @@ public @Data class Person {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+//    @NotBlank(message = "\"name\" must not be empty")
     private String name;
 
     @Column(name = "birthdate")
-    private String birthDate;
-    private double height; // unit: cm
-    private double weight;
+//    @NotBlank(message = "birthDate must not be empty")
+    private Date birthDate;
+    private Double height; // unit: cm
+    private Double weight;
     private String address;
 
-    @Column(nullable = false)
+    @Column(unique = true, nullable = false)
+//    @NotBlank(message = "\"identity\" must not be empty")
     private String identity;
 
-    /**
-     * Instantiate with minimum number of data
-     * @param identity
-     */
-    public Person(String name, String identity) {
-        this.identity = identity;
-    }
-
-//    public Person(int id, String name, String birthDate, double height, double weight, String address, String identity) {
-//        this.id = id;
-//        this.name = name;
-//        this.birthDate = birthDate;
-//        this.height = height;
-//        this.weight = weight;
-//        this.address = address;
-//        this.identity = identity;
-//    }
-
 //    @Column(name = "created_at")
+////    @Modi
 //    private String createdAt;
 //
 //    @Column(name = "modifiedAt")
 //    private String modifiedAt;
+
+    /**
+     * Instantiate with minimum number of data
+     */
+    public Person(String name, String identity) {
+        this.name = name;
+        this.identity = identity;
+    }
 }
