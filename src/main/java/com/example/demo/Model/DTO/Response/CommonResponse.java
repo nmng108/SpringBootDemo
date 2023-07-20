@@ -8,7 +8,6 @@ import org.springframework.lang.Nullable;
 
 @Builder
 @AllArgsConstructor
-@NoArgsConstructor
 @Data
 public class CommonResponse {
     private boolean success;

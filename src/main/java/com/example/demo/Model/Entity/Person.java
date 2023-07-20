@@ -1,19 +1,23 @@
 package com.example.demo.Model.Entity;
 
+import com.example.demo.Model.DTO.Request.PersonCreationDTO;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Date;
+import java.util.List;
 
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+@Data
 @Entity
-public @Data class Person {
+public class Person {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -35,14 +39,25 @@ public @Data class Person {
 ////    @Modi
 //    private String createdAt;
 //
-//    @Column(name = "modifiedAt")
+//    @Column(name = "modified_at")
 //    private String modifiedAt;
 
+    @OneToMany
+    private List<Vehicle> vehicles;
     /**
      * Instantiate with minimum number of data
      */
     public Person(String name, String identity) {
         this.name = name;
         this.identity = identity;
+    }
+
+    public Person(@NotNull PersonCreationDTO dto) {
+        this.name = dto.getName();
+        this.birthDate = dto.getBirthDate();
+        this.height = dto.getHeight();
+        this.weight = dto.getWeight();
+        this.address = dto.getAddress();
+        this.identity = dto.getIdentity();
     }
 }

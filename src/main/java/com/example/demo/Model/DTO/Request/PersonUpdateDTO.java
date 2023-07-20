@@ -1,19 +1,16 @@
 package com.example.demo.Model.DTO.Request;
 
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
-import java.sql.Date;
-
 @Data
-public class PersonCreationData {
-    @NotBlank(message = "\"name\" must not be empty")
+public class PersonUpdateDTO {
     @Length(min = 5, max = 45, message = "Invalid name length")
     private String name;
-    private Date birthDate;
+    @Pattern(regexp = "^((19[7-9][0-9])|([2-9][0-9]{3}))-((0?[1-9])|(1[0-2]))-((0?[1-9])|([12][0-9])|(3[01]))$",
+            message = "Input did not match the requirement")
+    private String birthDate;
     @Digits(integer = 3, fraction = 2)
     @DecimalMin(value = "20")
     @DecimalMax(value = "300")
@@ -24,7 +21,6 @@ public class PersonCreationData {
     private Double weight;
     @Length(min = 5, max = 70, message = "Invalid address's character sequence length")
     private String address;
-    @NotBlank(message = "\"identity\" must not be empty")
     @Length(min = 5, max = 15, message = "Invalid identity length")
     private String identity;
 }

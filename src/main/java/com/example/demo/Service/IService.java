@@ -8,5 +8,5 @@ import java.util.List;
 public interface IService {
     ResponseEntity<CommonResponse> findAll();
     ResponseEntity<CommonResponse> findById(int id);
-    void delete(int id);
+    ResponseEntity<CommonResponse> delete(int id);
 }

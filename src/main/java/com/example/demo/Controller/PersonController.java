@@ -1,14 +1,20 @@
 package com.example.demo.Controller;
 
-import com.example.demo.Model.DTO.Request.PersonDeleteForm;
-import com.example.demo.Model.DTO.Request.PersonCreationData;
-import com.example.demo.Model.DTO.Request.PersonUpdateForm;
+import com.example.demo.Model.DTO.Request.PersonDeletionDTO;
+import com.example.demo.Model.DTO.Request.PersonCreationDTO;
+import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
+import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
@@ -21,6 +27,7 @@ import java.util.HashMap;
 @RequestMapping(path = "/api/persons")
 public class PersonController {
     @Autowired
+    @Getter
     private PersonService service;
 
     @GetMapping()
@@ -32,25 +39,25 @@ public class PersonController {
                 );
             }
 
-            return service.findByIdentity(identity);
+            return this.getService().findByIdentity(identity);
         }
 
-        return service.findAll();
+        return this.getService().findAll();
     }
 
     @GetMapping(path = "/{id}")
-    public ResponseEntity<CommonResponse> getPersonById(@PathVariable int id) {
-        return service.findById(id);
+    public ResponseEntity<CommonResponse> getPersonById(@PathVariable String id) {
+        return this.getService().findByIdentity(id);
     }
 
     @PostMapping()
     public ResponseEntity<CommonResponse> create(
-            @RequestBody @Valid PersonCreationData data, BindingResult bindingResult
+            @RequestBody @Valid PersonCreationDTO data, BindingResult bindingResult
     ) {
         try {
             if (bindingResult.hasErrors()) return errorResponse(bindingResult);
 
-            return service.save(data);
+            return this.getService().save(data);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             throw new RuntimeException("URI syntax violated the spec"); // ?
@@ -59,17 +66,16 @@ public class PersonController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<CommonResponse> update(@PathVariable int id,
-                                                 @RequestBody @Valid PersonUpdateForm requestData,
+                                                 @RequestBody @Valid PersonUpdateDTO requestData,
                                                  BindingResult bindingResult) {
         if (bindingResult.hasErrors()) return errorResponse(bindingResult);
 
-        return service.updateById(id, requestData);
+        return this.getService().updateById(id, requestData);
     }
 
     @DeleteMapping()
-    public ResponseEntity<CommonResponse> deleteById(@RequestBody @Valid PersonDeleteForm form) {
-        service.delete(form.getId());
-        return ResponseEntity.ok(new CommonResponse(true, "Person with id " + form.getId() + "has been deleted."));
+    public ResponseEntity<CommonResponse> deleteById(@RequestBody @Valid PersonDeletionDTO form) {
+        return this.getService().delete(form.getId());
     }
 
     private ResponseEntity<CommonResponse> errorResponse(BindingResult bindingResult) {
@@ -94,7 +100,7 @@ public class PersonController {
         System.out.println(ex.getLocalizedMessage());
 
         return ResponseEntity.accepted().body(
-                CommonResponse.builder().errors(ex.getLocalizedMessage()).build()
+                CommonResponse.builder().success(false).errors(ex.getLocalizedMessage()).build()
         );
     }
 }
