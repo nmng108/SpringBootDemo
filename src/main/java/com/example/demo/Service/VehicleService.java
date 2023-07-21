@@ -10,7 +10,7 @@ import java.net.URISyntaxException;
 public interface VehicleService extends IService {
     ResponseEntity<CommonResponse> findByIdNumber(String identity);
 
-    ResponseEntity<CommonResponse> save(VehicleCreationDTO data) throws URISyntaxException;
+    ResponseEntity<CommonResponse> save(VehicleCreationDTO data);
 
     ResponseEntity<CommonResponse> updateByIdNumber(int id, PersonUpdateDTO form);
 }

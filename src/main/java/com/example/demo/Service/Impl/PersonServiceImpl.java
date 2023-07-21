@@ -1,6 +1,8 @@
 package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
+import com.example.demo.Exception.HttpException;
+import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonCreationDTO;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
@@ -38,44 +40,7 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> findByIdentity(String identity) {
-        String passedId = identity;
-        int head = 0, tail = identity.length() - 1;
-        boolean stringStarted = false;
-
-        for (int i = 0; i < identity.length(); i++) {
-            if (i == 0 && identity.charAt(i) == ' ') {
-                do {
-                    i += 1;
-                    System.out.println("head+1");
-                } while (i < identity.length() && identity.charAt(i) == ' ');
-
-                if (i < identity.length()) head = i;
-                else head = -1;
-                continue;
-            }
-
-            if (identity.charAt(i) == ' ') {
-                tail = i - 1;
-                do {
-                    i += 1;
-                } while (i < identity.length() && identity.charAt(i) == ' ');
-            }
-        }
-
-        System.out.println("head = " + head + ", tail = " + tail);
-
-        if (!identity.matches("([0-9]{1,15})|([a-zA-Z0-9]{1,15})")) {
-            HashMap<String, String> error = new HashMap<>();
-            error.put("id", "Invalid id in the request path");
-            HashMap<String, Object> errorMessage = new HashMap<>();
-            errorMessage.put("E00", error);
-
-            return ResponseEntity.badRequest().body(
-                    CommonResponse.builder().success(false).errors(errorMessage).build()
-            );
-        }
-
+    public ResponseEntity<CommonResponse> findByIdAndIdentity(String identity) {
         Person person;
 
         try {
@@ -90,7 +55,7 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> save(PersonCreationDTO requestData) throws URISyntaxException {
+    public ResponseEntity<CommonResponse> save(PersonCreationDTO requestData) {
         // check if identity has existed
         ResponseEntity<CommonResponse> identityCheckResult = checkIfIdentityHasExisted(requestData.getIdentity());
         if (identityCheckResult != null) return identityCheckResult;
@@ -99,9 +64,13 @@ public class PersonServiceImpl implements PersonService {
 
         newPerson = this.getRepository().save(newPerson);
 
-        return ResponseEntity
-                .created(new URI("/api/persons/" + newPerson.getId()))
-                .body(CommonResponse.builder().success(true).build());
+        try {
+            return ResponseEntity
+                    .created(new URI("/api/persons/" + newPerson.getId()))
+                    .body(new CommonResponse(true, newPerson));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("URI violated the specification");
+        }
     }
 
     @Override
@@ -128,7 +97,7 @@ public class PersonServiceImpl implements PersonService {
 
         modifiedPerson = this.getRepository().save(modifiedPerson);
 
-        return ResponseEntity.ok(CommonResponse.builder().success(true).data(modifiedPerson).build());
+        return ResponseEntity.ok(new CommonResponse(true, modifiedPerson));
     }
 
     @Override
@@ -148,7 +117,7 @@ public class PersonServiceImpl implements PersonService {
             errorMessage.put("details", error);
 
             return ResponseEntity.badRequest().body(
-                    CommonResponse.builder().success(false).errors(errorMessage).build()
+                    new CommonResponse(false, errorMessage)
             );
         }
 

@@ -2,6 +2,7 @@ package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
 import com.example.demo.DAO.VehicleRepository;
+import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Request.VehicleCreationDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
@@ -29,14 +30,14 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     public ResponseEntity<CommonResponse> findAll() {
-        return ResponseEntity.ok(CommonResponse.builder().success(true).data(
+        return ResponseEntity.ok(new CommonResponse(true,
                 this.getVehicleRepository().findAll().stream().map(VehicleDTO::new).toList()
-        ).build());
+        ));
     }
 
     @Override
     public ResponseEntity<CommonResponse> findById(int id) {
-        return ResponseEntity.ok(CommonResponse.builder().success(true).data(this.getVehicleRepository().findById(id)).build());
+        return ResponseEntity.ok(new CommonResponse(true, this.getVehicleRepository().findById(id)));
     }
 
     @Override
@@ -44,30 +45,28 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = this.getVehicleRepository().findByIdentificationNumber(idNumber);
         if (vehicle == null) return ResponseEntity.notFound().build();
 
-        return ResponseEntity.ok(CommonResponse.builder().success(true).data(vehicle).build());
+        return ResponseEntity.ok(new CommonResponse(true, vehicle));
     }
 
     @Override
-    public ResponseEntity<CommonResponse> save(VehicleCreationDTO data) throws URISyntaxException {
+    public ResponseEntity<CommonResponse> save(VehicleCreationDTO data) {
         Person person = this.getPersonRepository().findByIdentity(data.getOwnerIdentity());
-        if (person == null) return ResponseEntity.status(404).body(
-                CommonResponse.builder().success(false).errors("Person is not found").build()
-        );
+        if (person == null) return ResponseEntity.notFound().build();
 
         Vehicle vehicle = this.getVehicleRepository().findByIdentificationNumber(data.getIdNumber());
+        try {
         if (vehicle != null) {
-            return ResponseEntity.badRequest().body(
-                    CommonResponse.builder().success(false).errors(
-                            "Vehicle with idNumber " + data.getIdNumber() + " has existed"
-                    ).build()
-            );
+            throw new InvalidRequestException("Vehicle with idNumber " + data.getIdNumber() + " has existed");
         }
 
         vehicle = this.getVehicleRepository().save(new Vehicle(data, person));
-
-        return ResponseEntity.created(new URI("/api/vehicles/" + vehicle.getId())).body(
-                CommonResponse.builder().success(true).data(new VehicleDTO(vehicle)).build()
-        );
+            return ResponseEntity
+                    .created(new URI("/api/vehicles/" + vehicle.getId()))
+                    .body(new CommonResponse(true, new VehicleDTO(vehicle)));
+        } catch (URISyntaxException e) {
+            System.out.println(e.getInput());
+            throw new RuntimeException("URI violated the specification");
+        }
     }
 
     @Override
@@ -82,7 +81,9 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         this.getVehicleRepository().deleteById(id);
-        return ResponseEntity.ok(new CommonResponse(true, "Vehicle with id " + id + " has been deleted."));
+        return ResponseEntity.ok(
+                new CommonResponse(true, "Vehicle with id " + id + " has been deleted.")
+        );
     }
 
     public ResponseEntity<CommonResponse> delete(String idNumber) {
@@ -92,6 +93,8 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         this.getVehicleRepository().deleteById(vehicle.getId());
-        return ResponseEntity.ok(new CommonResponse(true, "Vehicle with id " + idNumber + " has been deleted."));
+        return ResponseEntity.ok(
+                new CommonResponse(true, "Vehicle with id " + idNumber + " has been deleted.")
+        );
     }
 }

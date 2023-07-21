@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import java.net.URISyntaxException;
 
 public interface PersonService extends IService {
-    ResponseEntity<CommonResponse> findByIdentity(String identity);
-    ResponseEntity<CommonResponse> save(PersonCreationDTO data) throws URISyntaxException;
+    ResponseEntity<CommonResponse> findByIdAndIdentity(String identity);
+    ResponseEntity<CommonResponse> save(PersonCreationDTO data);
     ResponseEntity<CommonResponse> updateById(int id, PersonUpdateDTO form);
 }
