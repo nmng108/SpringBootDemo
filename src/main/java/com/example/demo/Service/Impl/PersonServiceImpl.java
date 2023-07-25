@@ -40,15 +40,8 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> findByIdAndIdentity(String identity) {
-        Person person;
-
-        try {
-            person = this.getRepository().findById(Integer.parseInt(identity)).orElse(null);
-            if (person == null) person = this.getRepository().findByIdentity(identity);
-        } catch (NumberFormatException e) {
-            person = this.getRepository().findByIdentity(identity);
-        }
+    public ResponseEntity<CommonResponse> findByIdOrIdentity(String identity) {
+        Person person = this.find(identity);
 
         if (person == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(new CommonResponse(true, person));
@@ -57,7 +50,7 @@ public class PersonServiceImpl implements PersonService {
     @Override
     public ResponseEntity<CommonResponse> save(PersonCreationDTO requestData) {
         // check if identity has existed
-        ResponseEntity<CommonResponse> identityCheckResult = checkIfIdentityHasExisted(requestData.getIdentity());
+        ResponseEntity<CommonResponse> identityCheckResult = this.checkIfIdentityHasExisted(requestData.getIdentity());
         if (identityCheckResult != null) return identityCheckResult;
 
         Person newPerson = new Person(requestData);
@@ -74,8 +67,9 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> updateById(int id, PersonUpdateDTO requestData) {
-        Person modifiedPerson = this.getRepository().findById(id).orElse(null);
+    public ResponseEntity<CommonResponse> updateByIdOrIdentity(String identity, PersonUpdateDTO requestData) {
+
+        Person modifiedPerson = this.find(identity);
 
         if (modifiedPerson == null) {
             return ResponseEntity.notFound().build();
@@ -104,6 +98,19 @@ public class PersonServiceImpl implements PersonService {
     public ResponseEntity<CommonResponse> delete(int id) {
         this.getRepository().deleteById(id);
         return ResponseEntity.ok(new CommonResponse(true, "Person with id " + id + "has been deleted."));
+    }
+
+    private Person find(String identity) {
+        Person person;
+
+        try {
+            person = this.getRepository().findById(Integer.parseInt(identity)).orElse(null);
+            if (person == null) person = this.getRepository().findByIdentity(identity);
+        } catch (NumberFormatException e) {
+            person = this.getRepository().findByIdentity(identity);
+        }
+
+        return person;
     }
 
     private ResponseEntity<CommonResponse> checkIfIdentityHasExisted(String identity) {
