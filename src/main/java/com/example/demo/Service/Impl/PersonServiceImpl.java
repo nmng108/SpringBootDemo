@@ -1,9 +1,8 @@
 package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
-import com.example.demo.Exception.HttpException;
-import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonCreationDTO;
+import com.example.demo.Model.DTO.Request.PersonSearchingDTO;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
 import com.example.demo.Model.Entity.Person;
@@ -45,6 +44,24 @@ public class PersonServiceImpl implements PersonService {
 
         if (person == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(new CommonResponse(true, person));
+    }
+
+    @Override
+    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchingDTO criteria) {
+        HashSet<String> stringCriteria = new HashSet<>();
+
+        if (criteria.getId() != null) stringCriteria.add(criteria.getFormattedId());
+        if (criteria.getIdentity() != null) stringCriteria.add(criteria.getFormattedIdentity());
+        if (criteria.getName() != null) stringCriteria.add(criteria.getFormattedName());
+        if (criteria.getAddress() != null) stringCriteria.add(criteria.getFormattedAddress());
+        if (criteria.getBirthDate() != null) stringCriteria.add(criteria.getFormattedBirthDate());
+        if (criteria.getHeight() != null) stringCriteria.add(criteria.getFormattedHeight());
+        if (criteria.getWeight() != null) stringCriteria.add(criteria.getFormattedWeight());
+
+        List<Person> result = this.repository.findByCriteria(stringCriteria);
+
+        return result.isEmpty() ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(new CommonResponse(true, result));
     }
 
     @Override

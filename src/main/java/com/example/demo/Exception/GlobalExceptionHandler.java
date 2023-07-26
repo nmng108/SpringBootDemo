@@ -4,6 +4,7 @@ import com.example.demo.Model.DTO.Response.CommonResponse;
 import com.example.demo.Model.DTO.Response.SuccessState;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -55,6 +56,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(e.getHttpStatusCode()).body(
                 CommonResponse.builder().success(SuccessState.FALSE).errors(e.getErrorResponse()).build()
         );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<CommonResponse> handleUnreadableRequest(HttpMessageNotReadableException e) {
+        System.out.println("caught HttpMessageNotReadableException");
+        return ResponseEntity.badRequest().body(CommonResponse.builder().success(SuccessState.FALSE).errors(
+                "Wrong request body. Check and try again."
+        ).build());
     }
 
     @ExceptionHandler({Exception.class})
