@@ -1,5 +1,8 @@
 package com.example.demo.Model.DTO.Request;
 
+import com.example.demo.validator.AcceptedStrings;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
@@ -16,13 +19,20 @@ public class PersonSearchDTO {
 
     private String weight;
 
-    @Length(min = 5, max = 70, message = "Invalid address's character sequence length")
+    @Length(min = 1, max = 70, message = "Invalid address length")
     private String address;
 
-    @Length(min = 5, max = 15, message = "Invalid identity length")
+    @Length(min = 1, max = 20, message = "Invalid identity length")
     private String identity;
 
+    @AcceptedStrings({"and", "or"})
     private String mode;
+
+    @Pattern(regexp = "[a-zA-Z]{1,10}", message = "Invalid sorted field names")
+    private String sortBy;
+
+    @AcceptedStrings({"asc", "desc"})
+    private String order;
 
     private static final String[] OPERATORS = {"eq", "lt", "le", "gt", "ge", "like"};
 

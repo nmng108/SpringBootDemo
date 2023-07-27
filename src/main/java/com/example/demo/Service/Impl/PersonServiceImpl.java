@@ -1,6 +1,7 @@
 package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
+import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonCreationDTO;
 import com.example.demo.Model.DTO.Request.PersonSearchDTO;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
@@ -9,6 +10,7 @@ import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -26,13 +28,13 @@ public class PersonServiceImpl implements PersonService {
     private PersonRepository repository;
 
     @Override
-    public ResponseEntity<CommonResponse> findAll() {
-        return ResponseEntity.ok(new CommonResponse(true, (List<Person>) this.getRepository().findAll()));
+    public ResponseEntity<CommonResponse> findAll(Sort sort) {
+        return ResponseEntity.ok(new CommonResponse(true, (List<Person>) this.getRepository().findAll(sort)));
     }
 
     @Override
     public ResponseEntity<CommonResponse> findById(int id) {
-        Person person = this.getRepository().findById(id).orElse(null);
+        Person person = this.repository.findById(id).orElse(null);
 
         if (person == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(new CommonResponse(true, person));
@@ -48,6 +50,25 @@ public class PersonServiceImpl implements PersonService {
 
     @Override
     public ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO criteria) {
+        // sortBy always is specified first. If done, order may be specified or not (asc by default)
+        if (criteria.getOrder() != null && criteria.getSortBy() == null) {
+            throw new InvalidRequestException("\"sortBy\" must be specified along with \"order\"");
+        }
+        System.out.println(criteria.getSortBy());
+        Sort sort;
+
+        if (criteria.getOrder() != null) {
+            sort = switch (criteria.getOrder()) {
+                case "asc" -> Sort.by(Sort.Direction.ASC, criteria.getSortBy());
+                case "desc" -> Sort.by(Sort.Direction.DESC, criteria.getSortBy());
+                default -> throw new RuntimeException("Invalid sorting order");
+            };
+        } else if (criteria.getSortBy() != null) {
+            sort = Sort.by(Sort.Direction.ASC, criteria.getSortBy());
+        } else {
+            sort = Sort.unsorted();
+        }
+
         HashSet<String> stringCriteria = new HashSet<>();
 
         if (criteria.getId() != null) stringCriteria.add(criteria.getFormattedId());
@@ -58,10 +79,10 @@ public class PersonServiceImpl implements PersonService {
         if (criteria.getHeight() != null) stringCriteria.add(criteria.getFormattedHeight());
         if (criteria.getWeight() != null) stringCriteria.add(criteria.getFormattedWeight());
 
-        if (stringCriteria.isEmpty()) return this.findAll();
+        if (stringCriteria.isEmpty()) return this.findAll(sort);
 
         List<Person> result = this.repository.findByCriteria(stringCriteria,
-                criteria.getMode() != null && criteria.getMode().equals("or"));
+                criteria.getMode() != null && criteria.getMode().equals("or"), sort);
 
         return result.isEmpty() ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(new CommonResponse(true, result));

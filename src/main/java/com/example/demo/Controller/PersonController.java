@@ -23,7 +23,7 @@ public class PersonController {
     private PersonService service;
 
     @GetMapping
-    public ResponseEntity<CommonResponse> getPersons(PersonSearchDTO criteria) {
+    public ResponseEntity<CommonResponse> getPersons(@Valid PersonSearchDTO criteria) {
         // PersonSearchDTO object will always be created, even all its attributes are null.
         // After manually traversing through all attributes using 'if', service.findAll() will be
         // called if no attribute contains value.

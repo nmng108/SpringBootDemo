@@ -3,6 +3,8 @@ package com.example.demo.Exception;
 import com.example.demo.Model.DTO.Response.CommonResponse;
 import com.example.demo.Model.DTO.Response.SuccessState;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -14,6 +16,18 @@ import java.util.HashMap;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<CommonResponse> handleMismatchPropertyName(PropertyReferenceException e) {
+        System.out.println("caught PropertyReferenceException");
+        return this.handleInvalidRequest(new InvalidRequestException(e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<CommonResponse> handleMismatchPropertyName(InvalidDataAccessApiUsageException e) {
+        System.out.println("caught InvalidDataAccessApiUsageException");
+        return this.handleInvalidRequest(new InvalidRequestException("Wrong field name"));
+    }
+
     @ExceptionHandler({InvalidRequestException.class})
     public ResponseEntity<CommonResponse> handleInvalidRequest(InvalidRequestException e) {
         System.out.println("caught InvalidRequestException");
