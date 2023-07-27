@@ -19,6 +19,9 @@ public class CustomRepositoryImpl<T extends Person> implements CustomRepository<
     @PersistenceContext
     private EntityManager entityManager;
 
+    // accept query with no predicate. If using the 'and' operator (by default), the result will be identical
+    // to 'findAll()'. If we use 'or', the response will not contain any record, because a default predicate '1 != 1'
+    // will be added.
     @Override
     public List<Person> findByCriteria(Set<String> criteria, boolean usingOr) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
@@ -28,7 +31,7 @@ public class CustomRepositoryImpl<T extends Person> implements CustomRepository<
 
         criteria.forEach(condition -> {
             String[] components = condition.split(" ");
-            if (components.length < 3) {
+                if (components.length < 3) {
                 throw new RuntimeException(
                         "'" + condition + "'"
                                 + " does not follow the criteria format: " + "'<field> <operator> <value>'"
@@ -64,7 +67,7 @@ public class CustomRepositoryImpl<T extends Person> implements CustomRepository<
         });
 
         query.select(person).where(usingOr ?
-                builder.or(predicates.toArray(new Predicate[0]))
+                builder.or(predicates.toArray(new Predicate[0])) // ???
                 : builder.and(predicates.toArray(new Predicate[0]))
         );
 

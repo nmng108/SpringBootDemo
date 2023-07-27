@@ -23,8 +23,11 @@ public class PersonController {
     private PersonService service;
 
     @GetMapping
-    public ResponseEntity<CommonResponse> getPersons() {
-        return this.service.findAll();
+    public ResponseEntity<CommonResponse> getPersons(PersonSearchDTO criteria) {
+        // PersonSearchDTO object will always be created, even all its attributes are null.
+        // After manually traversing through all attributes using 'if', service.findAll() will be
+        // called if no attribute contains value.
+        return this.service.findByCriteria(criteria);
     }
 
     @GetMapping({"/{id}", "/{id}/"})
@@ -32,11 +35,6 @@ public class PersonController {
             @PathVariable @Pattern(regexp = "[0-9a-zA-Z]{1,15}", message = "Invalid resource id") String id
     ) {
         return this.service.findByIdOrIdentity(id);
-    }
-
-    @GetMapping({"/search", "/search/"})
-    public ResponseEntity<CommonResponse> search(PersonSearchDTO criteria) {
-        return this.service.findByCriteria(criteria);
     }
 
     @PostMapping

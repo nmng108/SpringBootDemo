@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Set;
 
 public interface CustomRepository<T extends Object> {
-    public List<Person> findByCriteria(Set<String> criteria, boolean usingAnd);
+    public List<Person> findByCriteria(Set<String> criteria, boolean usingOr);
 //    public
 }

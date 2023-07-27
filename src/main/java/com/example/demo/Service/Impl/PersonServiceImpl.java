@@ -58,8 +58,10 @@ public class PersonServiceImpl implements PersonService {
         if (criteria.getHeight() != null) stringCriteria.add(criteria.getFormattedHeight());
         if (criteria.getWeight() != null) stringCriteria.add(criteria.getFormattedWeight());
 
+        if (stringCriteria.isEmpty()) return this.findAll();
+
         List<Person> result = this.repository.findByCriteria(stringCriteria,
-                criteria.getMode().equals("or"));
+                criteria.getMode() != null && criteria.getMode().equals("or"));
 
         return result.isEmpty() ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(new CommonResponse(true, result));
