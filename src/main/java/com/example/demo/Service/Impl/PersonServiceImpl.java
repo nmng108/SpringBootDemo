@@ -2,7 +2,7 @@ package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
 import com.example.demo.Model.DTO.Request.PersonCreationDTO;
-import com.example.demo.Model.DTO.Request.PersonSearchingDTO;
+import com.example.demo.Model.DTO.Request.PersonSearchDTO;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
 import com.example.demo.Model.Entity.Person;
@@ -47,7 +47,7 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchingDTO criteria) {
+    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO criteria) {
         HashSet<String> stringCriteria = new HashSet<>();
 
         if (criteria.getId() != null) stringCriteria.add(criteria.getFormattedId());
@@ -58,7 +58,8 @@ public class PersonServiceImpl implements PersonService {
         if (criteria.getHeight() != null) stringCriteria.add(criteria.getFormattedHeight());
         if (criteria.getWeight() != null) stringCriteria.add(criteria.getFormattedWeight());
 
-        List<Person> result = this.repository.findByCriteria(stringCriteria);
+        List<Person> result = this.repository.findByCriteria(stringCriteria,
+                criteria.getMode().equals("or"));
 
         return result.isEmpty() ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(new CommonResponse(true, result));

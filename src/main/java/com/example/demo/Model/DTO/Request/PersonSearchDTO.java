@@ -1,11 +1,10 @@
 package com.example.demo.Model.DTO.Request;
 
 import lombok.Data;
-import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
 
 @Data
-public class PersonSearchingDTO {
+public class PersonSearchDTO {
     private String id;
 
     @Length(min = 5, max = 45, message = "Invalid name length")
@@ -23,46 +22,45 @@ public class PersonSearchingDTO {
     @Length(min = 5, max = 15, message = "Invalid identity length")
     private String identity;
 
+    private String mode;
+
     private static final String[] OPERATORS = {"eq", "lt", "le", "gt", "ge", "like"};
 
     public String getFormattedId() {
-        return "id " + PersonSearchingDTO.formatParamValue(id);
+        return "id " + PersonSearchDTO.formatParamValue(id);
     }
 
     public String getFormattedName() {
-        return "name " + PersonSearchingDTO.formatParamValue(name);
+        return "name " + PersonSearchDTO.formatParamValue(name);
     }
 
     public String getFormattedBirthDate() {
-        return "birthdate " + PersonSearchingDTO.formatParamValue(birthDate);
+        return "birthdate " + PersonSearchDTO.formatParamValue(birthDate);
     }
 
     public String getFormattedHeight() {
-        return "height " + PersonSearchingDTO.formatParamValue(height);
+        return "height " + PersonSearchDTO.formatParamValue(height);
     }
 
     public String getFormattedWeight() {
-        return "weight " + PersonSearchingDTO.formatParamValue(weight);
+        return "weight " + PersonSearchDTO.formatParamValue(weight);
     }
 
     public String getFormattedAddress() {
-        return "address" + PersonSearchingDTO.formatParamValue(address);
+        return "address" + PersonSearchDTO.formatParamValue(address);
     }
 
     public String getFormattedIdentity() {
-        return "identity " + PersonSearchingDTO.formatParamValue(identity);
+        return "identity " + PersonSearchDTO.formatParamValue(identity);
     }
 
     private static String formatParamValue(String value) {
         if (value == null) return null;
 
-        boolean notContainsOperator = true;
-
-        for (String operator : PersonSearchingDTO.OPERATORS) {
-            if (value.startsWith(operator + " ")) notContainsOperator = false;
+        for (String operator : PersonSearchDTO.OPERATORS) {
+            if (value.startsWith(operator + " ")) return value;
         }
 
-        if (notContainsOperator) return "= " + value;
-        return value;
+        return "= " + value;
     }
 }
