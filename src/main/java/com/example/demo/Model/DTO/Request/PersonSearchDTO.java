@@ -1,11 +1,15 @@
 package com.example.demo.Model.DTO.Request;
 
+import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.validator.AcceptedStrings;
 import jakarta.validation.ConstraintValidator;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,11 +17,17 @@ import java.util.Objects;
 
 @Data
 public class PersonSearchDTO {
+    public static final int DEFAULT_PAGE = 0;
+    public static final int DEFAULT_SIZE = 5;
+    private static final String[] OPERATORS = {"eq", "lt", "le", "gt", "ge", "like"};
+
+    @Pattern(regexp = "([0-9]+)|([a-z]{2,5}\s[0-9]+)", message = "Invalid id") // may be more detail
     private String id;
 
-    @Length(min = 5, max = 45, message = "Invalid name length")
+    @Pattern(regexp = "[0-9a-zA-Z-]{5,45}", message = "Invalid name")
     private String name;
 
+    @Pattern(regexp = "[0-9]{4}-[0-9]{2}-[0-9]{2}", message = "Invalid name") // may be more detail
     private String birthDate;
 
     private String height; // unit: cm
@@ -33,14 +43,42 @@ public class PersonSearchDTO {
     @AcceptedStrings({"and", "or"})
     private String mode;
 
-//    private final PersonSearchDTO personSearchDTO = this;
     @Pattern(regexp = "[a-zA-Z]{1,10}", message = "Invalid sorted field names")
     private String sortBy;
 
     @AcceptedStrings({"asc", "desc"})
     private String order;
 
-    private static final String[] OPERATORS = {"eq", "lt", "le", "gt", "ge", "like"};
+    @Pattern(regexp = "[0-9]+(,)?([0-9]+)?", message = "Invalid page")
+    private String page;
+
+    @Digits(integer = 2, fraction = 0)
+    private Integer size;
+
+    public Integer getSize() {
+        return Objects.isNull(this.size) ? DEFAULT_SIZE : this.size;
+    }
+
+//    public Map<String, Integer> getPage() {
+//        Map<String, Integer> result = new HashMap<>();
+//        int from = 0;
+//        Integer to = null;
+//
+//        if (page.matches("^[0-9]+$")) { // only 1 number exists
+//            from = Integer.parseInt(page);
+//        } else if (page.matches("^[0-9]+,([0-9]+)?$")) { // the 2nd number may exist or not
+//            String[] splitPageValue = page.split(",");
+//            from = Integer.parseInt(splitPageValue[0]);
+//            // get all remaining records (start from the 'from' page) if the 2nd number isn't specified
+//            to = splitPageValue.length == 1 ? Integer.MAX_VALUE : Integer.parseInt(splitPageValue[1]);
+//        } else {
+//            throw new InvalidRequestException("Invalid page");
+//        }
+//
+//        result.put("from", from);
+//        result.put("to", to);
+//        return result;
+//    }
 
     public record FormattedCondition(String propertyName, String condition) {
         public FormattedCondition {

@@ -10,6 +10,8 @@ import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -17,10 +19,7 @@ import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Date;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class PersonServiceImpl implements PersonService {
@@ -29,7 +28,7 @@ public class PersonServiceImpl implements PersonService {
 
     @Override
     public ResponseEntity<CommonResponse> findAll(@NonNull Sort sort) {
-            return ResponseEntity.ok(new CommonResponse(true, (List<Person>) this.repository.findAll(sort)));
+        return ResponseEntity.ok(new CommonResponse(true, (List<Person>) this.repository.findAll(sort)));
     }
 
     @Override
@@ -53,6 +52,19 @@ public class PersonServiceImpl implements PersonService {
         // sortBy always is specified first. If done, order may be specified or not (asc by default)
         Sort sort = this.getSort(criteria.getSortBy(), criteria.getOrder());
         Map<String, String> formattedCriteria = criteria.getFormattedCriteria();
+
+//        System.out.println("size: " + criteria.getSize() + "; page: " + criteria.getPage());
+        List<Pageable> pageableList = this.getPaging(criteria.getPage(), criteria.getSize(), sort);
+
+        // temp do not concern with search
+        if (!pageableList.isEmpty()) {
+            List<Person> result = new ArrayList<>();
+
+            pageableList.forEach(pageable -> result.addAll(this.repository.findAll(pageable).get().toList()));
+
+            return result.isEmpty() ? ResponseEntity.noContent().build()
+                    : ResponseEntity.ok(new CommonResponse(true, result));
+        }
 
         if (formattedCriteria.isEmpty()) return this.findAll(sort);
 
@@ -88,6 +100,48 @@ public class PersonServiceImpl implements PersonService {
         }
 
         return sort;
+    }
+
+    // size by default won't be considered if page isn't specified;
+    // if size is considered, page by default will be 0
+    // if page exists, size will be applied
+    // retrieve -> sort -> paginate OR retrieve -> paginate -> sort ???
+    List<Pageable> getPaging(String page, Integer size, Sort sort) {
+        List<Pageable> pageList = new ArrayList<>();
+
+        if (page != null) {
+            int from = 0;
+            Integer to = null;
+
+            if (page.matches("^[0-9]+$")) { // only 1 number exists
+                from = Integer.parseInt(page);
+            } else if (page.matches("^[0-9]+,([0-9]+)?$")) { // the 2nd number may exist or not
+                String[] splitPageValue = page.split(",");
+                from = Integer.parseInt(splitPageValue[0]);
+
+                // get all remaining records (start from the 'from' page) if the 2nd number isn't specified
+                if (splitPageValue.length == 1) {
+                    to = this.repository.findAll(PageRequest.of(0, size, sort)).getTotalPages();
+                    System.out.println("total pages: " + to); // CHECK total pages
+                } else {
+                    to = Integer.parseInt(splitPageValue[1]);
+                }
+            } else {
+                throw new InvalidRequestException("Invalid page");
+            }
+
+            if (to != null) {
+                for (int i = from; i <= to; i++) { // test with the page after the last one
+                    pageList.add(PageRequest.of(i, size, sort));
+                }
+            } else {
+                pageList.add(PageRequest.of(from, size, sort));
+            }
+        } else if (size != null) {
+            pageList.add(PageRequest.of(PersonSearchDTO.DEFAULT_PAGE, size, sort));
+        }
+
+        return pageList;
     }
 
     @Override
