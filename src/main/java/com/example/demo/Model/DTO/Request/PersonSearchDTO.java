@@ -3,8 +3,13 @@ package com.example.demo.Model.DTO.Request;
 import com.example.demo.validator.AcceptedStrings;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.constraints.Pattern;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 @Data
 public class PersonSearchDTO {
@@ -28,6 +33,7 @@ public class PersonSearchDTO {
     @AcceptedStrings({"and", "or"})
     private String mode;
 
+//    private final PersonSearchDTO personSearchDTO = this;
     @Pattern(regexp = "[a-zA-Z]{1,10}", message = "Invalid sorted field names")
     private String sortBy;
 
@@ -36,32 +42,39 @@ public class PersonSearchDTO {
 
     private static final String[] OPERATORS = {"eq", "lt", "le", "gt", "ge", "like"};
 
-    public String getFormattedId() {
-        return "id " + PersonSearchDTO.formatParamValue(id);
+    public record FormattedCondition(String propertyName, String condition) {
+        public FormattedCondition {
+            Objects.requireNonNull(propertyName);
+            Objects.requireNonNull(condition);
+        }
     }
 
-    public String getFormattedName() {
-        return "name " + PersonSearchDTO.formatParamValue(name);
+    public FormattedCondition getFormattedId() {
+        return new FormattedCondition("id", PersonSearchDTO.formatParamValue(this.id));
     }
 
-    public String getFormattedBirthDate() {
-        return "birthdate " + PersonSearchDTO.formatParamValue(birthDate);
+    public FormattedCondition getFormattedName() {
+        return new FormattedCondition("name", PersonSearchDTO.formatParamValue(this.name));
     }
 
-    public String getFormattedHeight() {
-        return "height " + PersonSearchDTO.formatParamValue(height);
+    public FormattedCondition getFormattedBirthDate() {
+        return new FormattedCondition("birthDate", PersonSearchDTO.formatParamValue(this.birthDate));
     }
 
-    public String getFormattedWeight() {
-        return "weight " + PersonSearchDTO.formatParamValue(weight);
+    public FormattedCondition getFormattedHeight() {
+        return new FormattedCondition("height", PersonSearchDTO.formatParamValue(this.height));
     }
 
-    public String getFormattedAddress() {
-        return "address" + PersonSearchDTO.formatParamValue(address);
+    public FormattedCondition getFormattedWeight() {
+        return new FormattedCondition("weight", PersonSearchDTO.formatParamValue(this.weight));
     }
 
-    public String getFormattedIdentity() {
-        return "identity " + PersonSearchDTO.formatParamValue(identity);
+    public FormattedCondition getFormattedAddress() {
+        return new FormattedCondition("address", PersonSearchDTO.formatParamValue(this.address));
+    }
+
+    public FormattedCondition getFormattedIdentity() {
+        return new FormattedCondition("identity", PersonSearchDTO.formatParamValue(this.identity));
     }
 
     private static String formatParamValue(String value) {
@@ -73,4 +86,19 @@ public class PersonSearchDTO {
 
         return "= " + value;
     }
+
+    public Map<String, String> getFormattedCriteria() {
+        Map<String, String> stringCriteria = new HashMap<>();
+
+        if (this.id != null) stringCriteria.put("id", this.getFormattedId().condition());
+        if (this.identity != null) stringCriteria.put("identity", this.getFormattedIdentity().condition());
+        if (this.name != null) stringCriteria.put("name", this.getFormattedName().condition());
+        if (this.address != null) stringCriteria.put("address", this.getFormattedAddress().condition());
+        if (this.birthDate != null) stringCriteria.put("birthDate", this.getFormattedBirthDate().condition());
+        if (this.height != null) stringCriteria.put("height", this.getFormattedHeight().condition());
+        if (this.weight != null) stringCriteria.put("weight", this.getFormattedWeight().condition());
+
+        return stringCriteria;
+    }
+
 }

@@ -22,11 +22,11 @@ public class GlobalExceptionHandler {
         return this.handleInvalidRequest(new InvalidRequestException(e.getMessage()));
     }
 
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ResponseEntity<CommonResponse> handleMismatchPropertyName(InvalidDataAccessApiUsageException e) {
-        System.out.println("caught InvalidDataAccessApiUsageException");
-        return this.handleInvalidRequest(new InvalidRequestException("Wrong field name"));
-    }
+//    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+//    public ResponseEntity<CommonResponse> handleMismatchPropertyName(InvalidDataAccessApiUsageException e) {
+//        System.out.println("caught InvalidDataAccessApiUsageException");
+//        return this.handleInvalidRequest(new InvalidRequestException("Wrong field name"));
+//    }
 
     @ExceptionHandler({InvalidRequestException.class})
     public ResponseEntity<CommonResponse> handleInvalidRequest(InvalidRequestException e) {
