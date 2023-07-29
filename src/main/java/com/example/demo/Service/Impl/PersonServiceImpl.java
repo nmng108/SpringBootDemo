@@ -1,11 +1,11 @@
 package com.example.demo.Service.Impl;
 
 import com.example.demo.DAO.PersonRepository;
-import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonCreationDTO;
 import com.example.demo.Model.DTO.Request.PersonSearchDTO;
 import com.example.demo.Model.DTO.Request.PersonUpdateDTO;
 import com.example.demo.Model.DTO.Response.CommonResponse;
+import com.example.demo.Model.DatabasePersonSearch;
 import com.example.demo.Model.Entity.Person;
 import com.example.demo.Service.PersonService;
 import lombok.NonNull;
@@ -19,7 +19,10 @@ import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Date;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class PersonServiceImpl implements PersonService {
@@ -48,100 +51,62 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO criteria) {
-        // sortBy always is specified first. If done, order may be specified or not (asc by default)
-        Sort sort = this.getSort(criteria.getSortBy(), criteria.getOrder());
-        Map<String, String> formattedCriteria = criteria.getFormattedCriteria();
-
-//        System.out.println("size: " + criteria.getSize() + "; page: " + criteria.getPage());
-        List<Pageable> pageableList = this.getPaging(criteria.getPage(), criteria.getSize(), sort);
+    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO dto) {
+        DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
+//        System.out.println("size: " + dto.getSize() + "; page: " + dto.getPage());
+//        List<Pageable> pageableList = this.getPaging(page, dto.getSize(), sort);
 
         // temp do not concern with search
-        if (!pageableList.isEmpty()) {
-            List<Person> result = new ArrayList<>();
+//        if (!pageableList.isEmpty()) {
+//            List<Person> result = new ArrayList<>();
+//
+//            pageableList.forEach(pageable -> result.addAll(this.repository.findAll(pageable).get().toList()));
+//
+//            return result.isEmpty() ? ResponseEntity.noContent().build()
+//                    : ResponseEntity.ok(new CommonResponse(true, result));
+//        }
 
-            pageableList.forEach(pageable -> result.addAll(this.repository.findAll(pageable).get().toList()));
+//        if (formattedCriteria.isEmpty()) return this.findAll(sort);
 
-            return result.isEmpty() ? ResponseEntity.noContent().build()
-                    : ResponseEntity.ok(new CommonResponse(true, result));
-        }
-
-        if (formattedCriteria.isEmpty()) return this.findAll(sort);
-
-        List<Person> result = this.repository.findByCriteria(formattedCriteria,
-                criteria.getMode() != null && criteria.getMode().equals("or"), sort);
+        List<Person> result = this.repository.findByCriteria(personSearch);
 
         return result.isEmpty() ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(new CommonResponse(true, result));
     }
 
-    private Sort getSort(String sortBy, String order) {
-        if (order != null && sortBy == null) {
-            throw new InvalidRequestException("\"sortBy\" must be specified along with \"order\"");
-        }
-
-        if (sortBy != null && Arrays.stream(PersonSearchDTO.class.getDeclaredFields())
-                .noneMatch(field -> field.getName().equals(sortBy))) {
-            throw new InvalidRequestException(sortBy + " is not a valid field");
-        }
-
-        Sort sort;
-
-        if (order != null) {
-            sort = switch (order) {
-                case "asc" -> Sort.by(Sort.Direction.ASC, sortBy);
-                case "desc" -> Sort.by(Sort.Direction.DESC, sortBy);
-                default -> throw new RuntimeException("Invalid sorting order");
-            };
-        } else if (sortBy != null) {
-            sort = Sort.by(Sort.Direction.ASC, sortBy);
-        } else {
-            sort = Sort.unsorted();
-        }
-
-        return sort;
-    }
-
-    // size by default won't be considered if page isn't specified;
-    // if size is considered, page by default will be 0
-    // if page exists, size will be applied
-    // retrieve -> sort -> paginate OR retrieve -> paginate -> sort ???
-    List<Pageable> getPaging(String page, Integer size, Sort sort) {
-        List<Pageable> pageList = new ArrayList<>();
+    /**
+     * Used for pagination by calling the default method findAll(Pageable).
+     *
+     * If size is considered, page by default will be 0
+     * If page exists, size will be applied
+     * retrieve -> sort -> paginate OR retrieve -> paginate -> sort ???
+     */
+    List<Pageable> getPaging(Map<String, Integer> page, Integer size, Sort sort) {
+        List<Pageable> pageableList = null;
 
         if (page != null) {
-            int from = 0;
-            Integer to = null;
-
-            if (page.matches("^[0-9]+$")) { // only 1 number exists
-                from = Integer.parseInt(page);
-            } else if (page.matches("^[0-9]+,([0-9]+)?$")) { // the 2nd number may exist or not
-                String[] splitPageValue = page.split(",");
-                from = Integer.parseInt(splitPageValue[0]);
-
-                // get all remaining records (start from the 'from' page) if the 2nd number isn't specified
-                if (splitPageValue.length == 1) {
-                    to = this.repository.findAll(PageRequest.of(0, size, sort)).getTotalPages();
-                    System.out.println("total pages: " + to); // CHECK total pages
-                } else {
-                    to = Integer.parseInt(splitPageValue[1]);
-                }
-            } else {
-                throw new InvalidRequestException("Invalid page");
-            }
+            int from = page.get("from");
+            Integer to = page.get("to");
 
             if (to != null) {
+                if (to.equals(Integer.MAX_VALUE)) {
+                    to = this.repository.findAll(PageRequest.of(0, size, sort)).getTotalPages();
+                }
+
+                pageableList = new ArrayList<>();
+
                 for (int i = from; i <= to; i++) { // test with the page after the last one
-                    pageList.add(PageRequest.of(i, size, sort));
+                    pageableList.add(PageRequest.of(i, size, sort));
                 }
             } else {
-                pageList.add(PageRequest.of(from, size, sort));
+                pageableList = new ArrayList<>();
+                pageableList.add(PageRequest.of(from, size, sort));
             }
         } else if (size != null) {
-            pageList.add(PageRequest.of(PersonSearchDTO.DEFAULT_PAGE, size, sort));
+            pageableList.add(PageRequest.of(PersonSearchDTO.DEFAULT_PAGE, size, sort));
         }
 
-        return pageList;
+        return pageableList;
     }
 
     @Override
