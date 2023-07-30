@@ -32,7 +32,7 @@ public class PersonController {
 
     @GetMapping({"/{id}", "/{id}/"})
     public ResponseEntity<CommonResponse> getPersonById(
-            @PathVariable @Pattern(regexp = "[0-9a-zA-Z]{1,15}", message = "Invalid resource id") String id
+            @PathVariable String id
     ) {
         return this.service.findByIdOrIdentity(id);
     }

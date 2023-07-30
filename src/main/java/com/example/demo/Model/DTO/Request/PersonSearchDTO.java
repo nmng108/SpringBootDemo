@@ -1,14 +1,11 @@
 package com.example.demo.Model.DTO.Request;
 
-import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.validator.AcceptedStrings;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Data
@@ -24,25 +21,26 @@ public class PersonSearchDTO {
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 5;
 
-//    @Pattern(regexp = "([0-9]+)|([a-z]{2,5} [0-9]+)", message = "Invalid id") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9]+", message = "Invalid id") // may be more detail
     private String id;
 
-    @Pattern(regexp = "[0-9a-zA-Z-]{5,45}", message = "Invalid name")
+    @Pattern(regexp = "[0-9a-zA-Z ]{1,45}", message = "Invalid name")
     private String name;
 
-    @Pattern(regexp = "[0-9]{4}-[0-9]{2}-[0-9]{2}", message = "Invalid birthDate") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9]{4}-[0-9]{2}-[0-9]{2}", message = "Invalid birthDate") // may be more detail
     private String birthDate;
 
-//    @Pattern(regexp = "([0-9]+)|([a-z]{2,5}\s[0-9]+)", message = "Invalid height value") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid id") // may be more detail
     private String height; // unit: cm
 
-//    @Pattern(regexp = "([0-9]+)|([a-z]{2,5}\s[0-9]+)", message = "Invalid weight value") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid id") // may be more detail
     private String weight;
 
-    @Length(min = 1, max = 70, message = "Invalid address length")
+    @Pattern(regexp = "([a-z=><]{1,7} )?[a-zA-Z0-9,._/-]{1,70}", message = "Invalid address") // may be more detail
     private String address;
 
     @Length(min = 1, max = 20, message = "Invalid identity length")
+    @Pattern(regexp = "([a-z=><]{1,7} )?[a-zA-Z0-9]{1,20}", message = "Invalid identity") // may be more detail
     private String identity;
 
     @AcceptedStrings(value = {AND_SEARCH, OR_SEARCH}, message = "\"mode\" is not an accepted value")
@@ -61,6 +59,7 @@ public class PersonSearchDTO {
     private Integer size;
 
     public Integer getSize() {
-        return Objects.isNull(this.size) ? DEFAULT_SIZE : this.size;
+        return Objects.isNull(this.page) ? null :
+                Objects.isNull(this.size) ? Integer.MAX_VALUE : this.size;
     }
 }

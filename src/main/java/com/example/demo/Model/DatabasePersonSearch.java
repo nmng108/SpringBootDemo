@@ -3,19 +3,17 @@ package com.example.demo.Model;
 import com.example.demo.Exception.InvalidRequestException;
 import com.example.demo.Model.DTO.Request.PersonSearchDTO;
 import com.example.demo.Model.Entity.Person;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Order;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.hibernate.HibernateException;
-import org.hibernate.type.descriptor.java.CoercionException;
 import org.springframework.data.domain.Sort;
 
-import java.util.*;
+import java.sql.Date;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-@AllArgsConstructor
 @Data
 public class DatabasePersonSearch {
     Map<String, Condition> criteria;
@@ -30,23 +28,20 @@ public class DatabasePersonSearch {
         this.pagination = this.constructsPagination(personSearchDTO.getPage(), personSearchDTO.getSize());
     }
 
-    public record Condition(String propertyName, String operator, String value) {
-        public Condition {
-            Objects.requireNonNull(propertyName);
-            Objects.requireNonNull(operator);
-            Objects.requireNonNull(value);
-        }
-    }
-
     // should add a regex or sth to specialize validation for each type of data ? DTO's validator did it
     private static Condition formatCondition(String propertyName, String condition) {
         // may put this into an "event" function that will be called after receiving and parsing request to PersonSearchDTO
+        if (propertyName == null) {
+            throw new RuntimeException("Property name is not found");
+        }
+
         if (condition == null) {
             throw new InvalidRequestException("Value of " + propertyName + " cannot be null or blank");
         }
 
         // may accept 'list' format here
 
+        // apply a common regex to all property's conditions
         if (!condition.matches("^[a-zA-Z0-9-._]+( [a-zA-Z0-9-._]+)*$")) {
             throw new InvalidRequestException("Invalid value of " + propertyName);
         }
@@ -73,7 +68,7 @@ public class DatabasePersonSearch {
 
     private Map<String, Condition> constructsCriteria(PersonSearchDTO personSearchDTO) {
         Map<String, Condition> stringCriteria = new HashMap<>();
-
+        // map DTO field names to entity's field names
         if (personSearchDTO.getId() != null)
             stringCriteria.put("id", formatCondition("id", personSearchDTO.getId()));
         if (personSearchDTO.getName() != null)
@@ -93,39 +88,40 @@ public class DatabasePersonSearch {
     }
 
     public List<Predicate> criteriaToPredicates(CriteriaBuilder builder, Root<Person> personRoot) {
-        return this.criteria.values().stream().<Predicate>map((condition) -> {
-            String propName = condition.propertyName();
-            // get the rest string; wrong if the substring [1] exists in the remaining value (may not in this case but be careful)
-            String value = condition.value();
-            Predicate predicate;
+        return this.criteria.values().stream().map((condition) -> {
+            String propName = condition.getPropertyName();
+            String value = condition.getValue();
 
+            // catch exception from conversing user's String input to Date or Number
             try {
-                // org.springframework.dao.InvalidDataAccessApiUsageException: org.hibernate.query.SemanticException:
-                // Could not resolve attribute 'xxx' of 'com.example.demo.Model.Entity.Person'
-                predicate = switch (condition.operator()) {
-                    case "like" -> builder.like(personRoot.get(propName), "%" + value + "%");
-                    case "equal", "eq", "=" -> builder.equal(personRoot.get(propName), value);
-                    case "le", "<=" -> builder.le(personRoot.get(propName), Double.parseDouble(value));
-                    case "lt", "<" -> builder.lt(personRoot.get(propName), Double.parseDouble(value));
-                    case "ge", ">=" -> builder.ge(personRoot.get(propName), Double.parseDouble(value));
-                    case "gt", ">" -> builder.gt(personRoot.get(propName), Double.parseDouble(value));
-                    default -> throw new RuntimeException("operator is not in the allowed types");
-                };
+                // assign an appropriate Expression<T> object to condition.expressionValue
+                if (condition.getExpressionValue() == null) {
+                    condition.setExpressionValue(switch (propName) {
+                        case "id" -> builder.literal(Integer.parseInt(value)); // Expression<Integer>
+                        case "height", "weight" -> builder.literal(Double.parseDouble(value));  // Expression<Double>
+                        case "birthDate" -> builder.literal(Date.valueOf(value));
+                        default -> condition.getOperator().equals("like")
+                                ? builder.literal("%".concat(value).concat("%"))
+                                : builder.literal(value); // Expression<String>
+                    });
+                }
             } catch (NumberFormatException e) {
-                throw new InvalidRequestException("Wrong input value");
-            } catch (CoercionException e) {
-                // happens when casting data type got error (e.g. double -> int, String -> double
-                // allow auto-casting from String -> Number but not String -> Date
-                throw new InvalidRequestException("Invalid numeric input value");
-            } catch (HibernateException e) {
-                // exception: Unknown wrap conversion requested: java.lang.String to java.sql.Date
                 throw new InvalidRequestException(e.getMessage());
             }
 
-            return predicate;
+            return switch (condition.getOperator()) {
+                case "like" ->
+                        builder.like(personRoot.get(propName), condition.getExpressionValue()); // allow some other data types and serve as "equal"
+                case "equal", "eq", "=" -> builder.equal(personRoot.get(propName), condition.getExpressionValue());
+                case "le", "<=" -> builder.lessThanOrEqualTo(personRoot.get(propName), condition.getExpressionValue());
+                case "lt", "<" -> builder.lessThan(personRoot.get(propName), condition.getExpressionValue());
+                case "ge", ">=" ->
+                        builder.greaterThanOrEqualTo(personRoot.get(propName), condition.getExpressionValue());
+                case "gt", ">" -> builder.greaterThan(personRoot.get(propName), condition.getExpressionValue());
+                default -> throw new RuntimeException("operator is not in the allowed types");
+            };
         }).toList();
     }
-
 
     /**
      * Use 'and' in conditional expression if there's no criterion passed by user
@@ -146,8 +142,6 @@ public class DatabasePersonSearch {
      * @param order  String
      * @return org.springframework.data.domain.Sort
      */
-
-
     private Sort constructsSort(String sortBy, String order) {
         if (order != null && sortBy == null) {
             throw new InvalidRequestException("\"sortBy\" must be specified along with \"order\"");
@@ -176,11 +170,30 @@ public class DatabasePersonSearch {
     }
 
     public List<Order> sortToCriteriaOrders(CriteriaBuilder builder, Root<Person> personRoot) {
-        return this.sort.stream().<Order>map(sortOrder -> sortOrder.isDescending() ?
+        return this.sort.stream().map(sortOrder -> sortOrder.isDescending() ?
                 builder.desc(personRoot.get(sortOrder.getProperty()))
                 :
                 builder.asc(personRoot.get(sortOrder.getProperty()))
         ).toList();
+    }
+
+    private Pagination constructsPagination(String page, Integer size) {
+        return page == null ? null : new Pagination(page, size);
+    }
+
+    @Data
+    public static class Condition {
+        private String propertyName;
+        private String operator;
+        private String value;
+        private Expression expressionValue;
+
+        public Condition(String propertyName, String operator, String value) {
+            this.propertyName = propertyName;
+            this.operator = operator;
+            this.value = value;
+            this.expressionValue = null;
+        }
     }
 
     @AllArgsConstructor
@@ -211,11 +224,24 @@ public class DatabasePersonSearch {
             this.to = to;
             this.size = size;
         }
-    }
 
-    private Pagination constructsPagination(String page, Integer size) {
-        return page == null
-                ? null
-                : new Pagination(page, size);
+        public int firstRecordNumber() {
+            return this.from * this.size;
+        }
+
+        public int getNumberOfRecords() {
+            // should count before fetching (instead of using MAX_VALUE); and pass an argument to turn on/off it
+            int numberOfRecords;
+
+            if (this.to == null) {
+                numberOfRecords = this.size;
+            } else if (this.to == Integer.MAX_VALUE) {
+                numberOfRecords = this.to;
+            } else {
+                numberOfRecords = (this.to - this.from + 1) * this.size;
+            }
+
+            return numberOfRecords;
+        }
     }
 }
