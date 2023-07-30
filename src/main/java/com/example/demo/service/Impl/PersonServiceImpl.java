@@ -1,15 +1,15 @@
 package com.example.demo.service.Impl;
 
 import com.example.demo.dao.PersonRepository;
+import com.example.demo.entity.Person;
+import com.example.demo.model.DatabasePersonSearch;
 import com.example.demo.model.dto.request.PersonCreationDTO;
 import com.example.demo.model.dto.request.PersonSearchDTO;
 import com.example.demo.model.dto.request.PersonUpdateDTO;
 import com.example.demo.model.dto.response.CommonResponse;
-import com.example.demo.model.DatabasePersonSearch;
-import com.example.demo.entity.Person;
+import com.example.demo.model.dto.response.PaginationSuccessResponse;
 import com.example.demo.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -24,18 +24,18 @@ public class PersonServiceImpl implements PersonService {
     @Autowired
     private PersonRepository repository;
 
-    @Override
-    public ResponseEntity<CommonResponse> findAll(Sort sort) {
-        return ResponseEntity.ok(new CommonResponse(true, this.repository.findAll(sort)));
-    }
+//    @Override
+//    public ResponseEntity<CommonResponse> findAll(Sort sort) {
+//        return ResponseEntity.ok(new CommonResponse(true, this.repository.findAll(sort)));
+//    }
 
-    @Override
-    public ResponseEntity<CommonResponse> findById(int id) {
-        Person person = this.repository.findById(id).orElse(null);
-
-        if (person == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(new CommonResponse(true, person));
-    }
+//    @Override
+//    public ResponseEntity<CommonResponse> findById(int id) {
+//        Person person = this.repository.findById(id).orElse(null);
+//
+//        if (person == null) return ResponseEntity.notFound().build();
+//        return ResponseEntity.ok(new CommonResponse(true, person));
+//    }
 
     @Override
     public ResponseEntity<CommonResponse> findByIdOrIdentity(String identity) {
@@ -46,12 +46,16 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO dto) {
+    public ResponseEntity<?> findByCriteria(PersonSearchDTO dto) {
         DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
+        Long counter = dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null;
         List<Person> result = this.repository.findByCriteria(personSearch);
 
-        return result.isEmpty() ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(new CommonResponse(true, result));
+        return ResponseEntity.ok(dto.getPage() != null
+//                ? new PaginationSuccessResponse<Person>(true, counter, (long) dto.getSize())
+                ? new PaginationSuccessResponse<Person>(true, result, counter, (long) dto.getSize())
+                : new CommonResponse(true, result)
+        );
     }
 
     @Override

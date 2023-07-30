@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface CustomRepository<T extends Object> {
     public List<Person> findByCriteria(DatabasePersonSearch criteria);
+    public Long countByCriteria(DatabasePersonSearch personSearch);
 //    public
 }

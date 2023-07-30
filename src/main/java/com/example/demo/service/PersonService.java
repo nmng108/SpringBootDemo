@@ -8,10 +8,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 
 public interface PersonService {
-    ResponseEntity<CommonResponse> findAll(Sort sort);
-    ResponseEntity<CommonResponse> findById(int id);
+//    ResponseEntity<CommonResponse> findAll(Sort sort);
+//    ResponseEntity<CommonResponse> findById(int id);
     ResponseEntity<CommonResponse> findByIdOrIdentity(String identity);
-    ResponseEntity<CommonResponse> findByCriteria(PersonSearchDTO criteria);
+    ResponseEntity<?> findByCriteria(PersonSearchDTO criteria);
     ResponseEntity<CommonResponse> save(PersonCreationDTO data);
     ResponseEntity<CommonResponse> updateByIdOrIdentity(String identity, PersonUpdateDTO form);
     ResponseEntity<CommonResponse> delete(int id);

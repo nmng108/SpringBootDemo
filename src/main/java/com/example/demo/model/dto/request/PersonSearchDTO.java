@@ -58,8 +58,10 @@ public class PersonSearchDTO {
     @Digits(integer = 2, fraction = 0)
     private Integer size;
 
+    private Boolean count;
+
     public Integer getSize() {
         return Objects.isNull(this.page) ? null :
-                Objects.isNull(this.size) ? Integer.MAX_VALUE : this.size;
+                Objects.isNull(this.size) ? DEFAULT_SIZE : this.size;
     }
 }
