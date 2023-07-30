@@ -2,7 +2,7 @@ package com.example.demo.model;
 
 import com.example.demo.exception.InvalidRequestException;
 import com.example.demo.model.dto.request.PersonSearchDTO;
-import com.example.demo.model.entity.Person;
+import com.example.demo.entity.Person;
 import jakarta.persistence.criteria.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

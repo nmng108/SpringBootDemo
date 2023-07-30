@@ -6,7 +6,7 @@ import com.example.demo.model.dto.request.PersonSearchDTO;
 import com.example.demo.model.dto.request.PersonUpdateDTO;
 import com.example.demo.model.dto.response.CommonResponse;
 import com.example.demo.model.DatabasePersonSearch;
-import com.example.demo.model.entity.Person;
+import com.example.demo.entity.Person;
 import com.example.demo.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;

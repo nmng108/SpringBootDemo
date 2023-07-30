@@ -2,7 +2,7 @@ package com.example.demo.dao.Impl;
 
 import com.example.demo.dao.CustomRepository;
 import com.example.demo.model.DatabasePersonSearch;
-import com.example.demo.model.entity.Person;
+import com.example.demo.entity.Person;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.*;

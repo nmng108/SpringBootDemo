@@ -1,7 +1,7 @@
 package com.example.demo.dao;
 
 import com.example.demo.model.DatabasePersonSearch;
-import com.example.demo.model.entity.Person;
+import com.example.demo.entity.Person;
 
 import java.util.List;
 

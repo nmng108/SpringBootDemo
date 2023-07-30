@@ -1,4 +1,4 @@
-package com.example.demo.model.entity;
+package com.example.demo.entity;
 
 import com.example.demo.model.dto.request.PersonCreationDTO;
 import jakarta.persistence.*;

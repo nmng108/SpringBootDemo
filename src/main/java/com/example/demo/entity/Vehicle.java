@@ -1,4 +1,4 @@
-package com.example.demo.model.entity;
+package com.example.demo.entity;
 
 import com.example.demo.model.dto.request.VehicleCreationDTO;
 import com.example.demo.model.dto.request.VehicleType;

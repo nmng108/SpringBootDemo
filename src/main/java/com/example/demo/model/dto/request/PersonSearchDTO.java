@@ -30,10 +30,10 @@ public class PersonSearchDTO {
     @Pattern(regexp = "([a-z=><]{1,7} )?[0-9]{4}-[0-9]{2}-[0-9]{2}", message = "Invalid birthDate") // may be more detail
     private String birthDate;
 
-    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid id") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid height") // may be more detail
     private String height; // unit: cm
 
-    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid id") // may be more detail
+    @Pattern(regexp = "([a-z=><]{1,7} )?[0-9,.]{1,6}", message = "Invalid weight") // may be more detail
     private String weight;
 
     @Pattern(regexp = "([a-z=><]{1,7} )?[a-zA-Z0-9,._/-]{1,70}", message = "Invalid address") // may be more detail
