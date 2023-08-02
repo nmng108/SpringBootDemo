@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import com.example.demo.model.dto.request.PersonCreationDTO;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -41,8 +42,9 @@ public class Person {
 //    @Column(name = "modified_at")
 //    private String modifiedAt;
 
-    @OneToMany
+    @OneToMany(mappedBy = "owner")
     private List<Vehicle> vehicles;
+
     /**
      * Instantiate with minimum number of data
      */

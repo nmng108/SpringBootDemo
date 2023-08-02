@@ -8,6 +8,7 @@ import com.example.demo.model.dto.request.PersonSearchDTO;
 import com.example.demo.model.dto.request.PersonUpdateDTO;
 import com.example.demo.model.dto.response.CommonResponse;
 import com.example.demo.model.dto.response.PaginationSuccessResponse;
+import com.example.demo.model.dto.response.PersonDTO;
 import com.example.demo.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,18 +43,20 @@ public class PersonServiceImpl implements PersonService {
         Person person = this.find(identity);
 
         if (person == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(new CommonResponse(true, person));
+        return ResponseEntity.ok(new CommonResponse(true, new PersonDTO(person)));
     }
 
     @Override
     public ResponseEntity<?> findByCriteria(PersonSearchDTO dto) {
         DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
-        Long counter = dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null;
+        Long counter = dto.getCount() != null ?
+                (dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null)
+                : null;
         List<Person> result = this.repository.findByCriteria(personSearch);
 
         return ResponseEntity.ok(dto.getPage() != null
 //                ? new PaginationSuccessResponse<Person>(true, counter, (long) dto.getSize())
-                ? new PaginationSuccessResponse<Person>(true, result, counter, (long) dto.getSize())
+                ? new PaginationSuccessResponse<PersonDTO>(true, result.stream().map(PersonDTO::new).toList(), counter, (long) dto.getSize())
                 : new CommonResponse(true, result)
         );
     }

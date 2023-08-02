@@ -2,6 +2,7 @@ package com.example.demo.entity;
 
 import com.example.demo.model.dto.request.VehicleCreationDTO;
 import com.example.demo.model.dto.request.VehicleType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -31,8 +32,8 @@ public class Vehicle {
 //    @NotBlank(message = "\"identificationNumber\" must not be empty")
     private String identificationNumber;
 
-    @JoinColumn
-    @ManyToOne()
+    @JoinColumn(name = "owner_id")
+    @ManyToOne
     private Person owner;
 
     private VehicleType type;

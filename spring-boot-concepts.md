@@ -8,7 +8,7 @@ a. Domain Model layer: contains aggregates which group classes relating to each 
 b. Infrastructure-Persistence layer:
 
 - **Repository**: maps 1 aggregate root to 1 repository.
-    - define database queries & commands ???
+    - define database queries & commands
 
 - __Unit of Work__: a pattern that helps transform db queries of a domain activity into a transaction.
     - Benefits: executing multiples related db commands in a transaction helps mitigate cost at re-opening db connections or running discrete commands.

@@ -23,8 +23,10 @@ public class PaginationSuccessResponse<T> {
 
         this.success = success ? SuccessState.TRUE : SuccessState.FALSE;
         this.data = data;
-        double doublePages = (double) totalRecords / size;
-        this.totalPages = doublePages > (long) doublePages ? (long) doublePages + 1 : (long) doublePages;
+        if (totalRecords != null) {
+            double doublePages = (double) totalRecords / size;
+            this.totalPages = doublePages > (long) doublePages ? (long) doublePages + 1 : (long) doublePages;
+        }
     }
 
     public PaginationSuccessResponse(boolean success, Long totalRecords, Long size) {
