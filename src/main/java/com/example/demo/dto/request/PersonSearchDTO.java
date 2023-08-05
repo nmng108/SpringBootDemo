@@ -1,4 +1,4 @@
-package com.example.demo.model.dto.request;
+package com.example.demo.dto.request;
 
 import com.example.demo.validator.AcceptedStrings;
 import jakarta.validation.constraints.Digits;

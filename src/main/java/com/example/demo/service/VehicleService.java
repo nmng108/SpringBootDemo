@@ -1,8 +1,8 @@
 package com.example.demo.service;
 
-import com.example.demo.model.dto.request.PersonUpdateDTO;
-import com.example.demo.model.dto.request.VehicleCreationDTO;
-import com.example.demo.model.dto.response.CommonResponse;
+import com.example.demo.dto.request.PersonUpdateDTO;
+import com.example.demo.dto.request.VehicleCreationDTO;
+import com.example.demo.dto.response.CommonResponse;
 import org.springframework.http.ResponseEntity;
 
 public interface VehicleService {

@@ -1,8 +1,8 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.dto.request.VehicleCreationDTO;
-import com.example.demo.model.dto.request.VehicleDeletionDTO;
-import com.example.demo.model.dto.response.CommonResponse;
+import com.example.demo.dto.request.VehicleCreationDTO;
+import com.example.demo.dto.request.VehicleDeletionDTO;
+import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.service.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,6 +1,6 @@
-package com.example.demo.model.dto.response;
+package com.example.demo.dto.response;
 
-import com.example.demo.model.dto.request.VehicleType;
+import com.example.demo.dto.request.VehicleType;
 import com.example.demo.entity.Vehicle;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

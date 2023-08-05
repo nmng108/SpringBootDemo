@@ -1,4 +1,4 @@
-package com.example.demo.model.dto.request;
+package com.example.demo.dto.request;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -7,7 +7,7 @@ import org.hibernate.validator.constraints.Length;
 import java.sql.Date;
 
 @Data
-public class VehicleUpdateDTO {
+public class VehicleCreationDTO {
     @NotNull(message = "\"type\" must not be empty")
     private VehicleType type;
 
@@ -29,3 +29,4 @@ public class VehicleUpdateDTO {
     @NotNull
     private Date acquisitionDate;
 }
+

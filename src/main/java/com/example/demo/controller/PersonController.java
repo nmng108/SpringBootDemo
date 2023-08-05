@@ -1,10 +1,10 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.dto.request.PersonCreationDTO;
-import com.example.demo.model.dto.request.PersonDeletionDTO;
-import com.example.demo.model.dto.request.PersonSearchDTO;
-import com.example.demo.model.dto.request.PersonUpdateDTO;
-import com.example.demo.model.dto.response.CommonResponse;
+import com.example.demo.dto.request.PersonCreationDTO;
+import com.example.demo.dto.request.PersonDeletionDTO;
+import com.example.demo.dto.request.PersonSearchDTO;
+import com.example.demo.dto.request.PersonUpdateDTO;
+import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.service.PersonService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;

@@ -1,4 +1,4 @@
-package com.example.demo.model.dto.request;
+package com.example.demo.dto.request;
 
 public enum VehicleType {
     MOTOR,

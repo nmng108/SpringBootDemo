@@ -1,8 +1,8 @@
-package com.example.demo.model.dto.response;
+package com.example.demo.dto.response;
 
+import com.example.demo.dto.request.VehicleType;
 import com.example.demo.entity.Person;
 import com.example.demo.entity.Vehicle;
-import com.example.demo.model.dto.request.VehicleType;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;

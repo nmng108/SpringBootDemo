@@ -1,6 +1,6 @@
 package com.example.demo.entity;
 
-import com.example.demo.model.dto.request.PersonCreationDTO;
+import com.example.demo.dto.request.PersonCreationDTO;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -43,6 +43,7 @@ public class Person {
 //    private String modifiedAt;
 
     @OneToMany(mappedBy = "owner")
+    @JsonBackReference
     private List<Vehicle> vehicles;
 
     /**

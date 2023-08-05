@@ -1,8 +1,7 @@
 package com.example.demo.entity;
 
-import com.example.demo.model.dto.request.VehicleCreationDTO;
-import com.example.demo.model.dto.request.VehicleType;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.example.demo.dto.request.VehicleCreationDTO;
+import com.example.demo.dto.request.VehicleType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

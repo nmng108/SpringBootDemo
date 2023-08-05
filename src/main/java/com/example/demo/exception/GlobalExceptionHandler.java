@@ -1,7 +1,7 @@
 package com.example.demo.exception;
 
-import com.example.demo.model.dto.response.CommonResponse;
-import com.example.demo.model.dto.response.SuccessState;
+import com.example.demo.dto.response.CommonResponse;
+import com.example.demo.dto.response.SuccessState;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.ResponseEntity;
