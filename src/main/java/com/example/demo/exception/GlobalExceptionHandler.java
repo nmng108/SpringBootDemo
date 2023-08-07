@@ -10,10 +10,17 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import java.nio.file.NoSuchFileException;
 import java.util.HashMap;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(NoSuchFileException.class)
+    public ResponseEntity<CommonResponse> handleStoragePathNotFound(NoSuchFileException e) {
+        System.out.println("caught NoSuchFileException");
+        return this.handleInvalidRequest(new InvalidRequestException(e.getMessage()));
+    }
+
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<CommonResponse> handleMismatchPropertyName(PropertyReferenceException e) {
         System.out.println("caught PropertyReferenceException");

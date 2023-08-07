@@ -1,29 +1,31 @@
 package com.example.demo.service.Impl;
 
 import com.example.demo.dao.PersonRepository;
-import com.example.demo.entity.Person;
-import com.example.demo.model.DatabasePersonSearch;
 import com.example.demo.dto.request.PersonCreationDTO;
 import com.example.demo.dto.request.PersonSearchDTO;
 import com.example.demo.dto.request.PersonUpdateDTO;
 import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.dto.response.PaginationSuccessResponse;
 import com.example.demo.dto.response.PersonDTO;
+import com.example.demo.entity.Person;
+import com.example.demo.model.DatabasePersonSearch;
 import com.example.demo.service.PersonService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-    @Autowired
     private PersonRepository repository;
+
+    public PersonServiceImpl(PersonRepository personRepository) {
+        this.repository = Objects.requireNonNull(personRepository);
+    }
 
 //    @Override
 //    public ResponseEntity<CommonResponse> findAll(Sort sort) {
@@ -49,15 +51,14 @@ public class PersonServiceImpl implements PersonService {
     @Override
     public ResponseEntity<?> findByCriteria(PersonSearchDTO dto) {
         DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
-        Long counter = dto.getCount() != null ?
-                (dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null)
+        Long counter = dto.getCount() != null
+                ? (dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null)
                 : null;
         List<Person> result = this.repository.findByCriteria(personSearch);
 
         return ResponseEntity.ok(dto.getPage() != null
-//                ? new PaginationSuccessResponse<Person>(true, counter, (long) dto.getSize())
-                ? new PaginationSuccessResponse<PersonDTO>(true, result.stream().map(PersonDTO::new).toList(), counter, (long) dto.getSize())
-                : new CommonResponse(true, result)
+                ? new PaginationSuccessResponse<>(true, result.stream().map(PersonDTO::new).toList(), counter, (long) dto.getSize())
+                : new CommonResponse(true, result.stream().map(PersonDTO::new).toList())
         );
     }
 
@@ -71,13 +72,9 @@ public class PersonServiceImpl implements PersonService {
 
         newPerson = this.repository.save(newPerson);
 
-        try {
-            return ResponseEntity
-                    .created(new URI("/api/persons/" + newPerson.getId()))
-                    .body(new CommonResponse(true, newPerson));
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("URI violated the specification");
-        }
+        return ResponseEntity
+                .created(URI.create("/api/persons/" + newPerson.getId()))
+                .body(new CommonResponse(true, newPerson));
     }
 
     @Override

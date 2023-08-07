@@ -13,14 +13,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
+
 // may change Person to PersonDTO in responses
 
 @RestController
 @RequestMapping({"/api/persons", "/api/persons/"})
 @Validated
 public class PersonController {
-    @Autowired
     private PersonService service;
+
+    public PersonController(PersonService personService) {
+        this.service = Objects.requireNonNull(personService);
+    }
 
     @GetMapping
     public ResponseEntity<?> getPersons(@Valid PersonSearchDTO criteria) {
