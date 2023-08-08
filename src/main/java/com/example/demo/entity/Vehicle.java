@@ -2,6 +2,7 @@ package com.example.demo.entity;
 
 import com.example.demo.dto.request.VehicleCreationDTO;
 import com.example.demo.dto.request.VehicleType;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Date;
 import java.time.Instant;
+import java.util.Set;
 
 @Builder
 @AllArgsConstructor
@@ -34,6 +36,10 @@ public class Vehicle {
     @JoinColumn(name = "owner_id")
     @ManyToOne
     private Person owner;
+
+    @OneToMany(mappedBy = "vehicle")
+    @JsonBackReference
+    private Set<VehicleImage> images;
 
     private VehicleType type;
 

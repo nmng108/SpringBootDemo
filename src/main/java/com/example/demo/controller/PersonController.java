@@ -7,6 +7,7 @@ import com.example.demo.dto.request.PersonUpdateDTO;
 import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.service.PersonService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +38,7 @@ public class PersonController {
 
     @GetMapping({"/{id}", "/{id}/"})
     public ResponseEntity<CommonResponse> getPersonById(
-            @PathVariable String id
+            @PathVariable @NotBlank String id
     ) {
         return this.service.findByIdOrIdentity(id);
     }

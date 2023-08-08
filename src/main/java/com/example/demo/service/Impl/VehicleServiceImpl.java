@@ -2,6 +2,7 @@ package com.example.demo.service.Impl;
 
 import com.example.demo.configuration.StorageProperties;
 import com.example.demo.dao.PersonRepository;
+import com.example.demo.dao.VehicleImageRepository;
 import com.example.demo.dao.VehicleRepository;
 import com.example.demo.dto.request.PersonUpdateDTO;
 import com.example.demo.dto.request.VehicleCreationDTO;
@@ -10,10 +11,12 @@ import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.dto.response.VehicleDTO;
 import com.example.demo.entity.Person;
 import com.example.demo.entity.Vehicle;
+import com.example.demo.entity.VehicleImage;
 import com.example.demo.exception.InvalidRequestException;
 import com.example.demo.service.VehicleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,24 +25,25 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class VehicleServiceImpl implements VehicleService {
     private static final Logger log = LoggerFactory.getLogger(VehicleServiceImpl.class);
     private final VehicleRepository vehicleRepository;
+    private final VehicleImageRepository imageRepository;
     private final PersonRepository personRepository;
     private final StorageProperties storageProperties;
     private final Path uploadLocation;
     private final String BASE_URI = "/api/vehicles";
 
-    public VehicleServiceImpl(VehicleRepository vehicleRepository, PersonRepository personRepository, StorageProperties storageProperties) throws IOException {
+    public VehicleServiceImpl(VehicleRepository vehicleRepository, VehicleImageRepository imageRepository, PersonRepository personRepository, StorageProperties storageProperties) throws IOException {
         this.vehicleRepository = Objects.requireNonNull(vehicleRepository);
+        this.imageRepository = Objects.requireNonNull(imageRepository);
         this.personRepository = Objects.requireNonNull(personRepository);
         this.storageProperties = storageProperties;
         this.uploadLocation = Path.of(storageProperties.getVehicleImageLocation());
@@ -113,36 +117,77 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public ResponseEntity getImageAddresses(String idNumber) {
+    public ResponseEntity<CommonResponse> getImageAddresses(String idNumber) {
         Vehicle vehicle = this.find(idNumber);
 
         if (vehicle == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(idNumber);
+
+        Set<VehicleImage> vehicleImages = this.imageRepository.findByVehicle(vehicle);
+
+        if (vehicleImages.isEmpty()) return ResponseEntity.notFound().build();
+
+        List<String> result = vehicleImages.stream().map(VehicleImage::getURI).toList();
+
+        return ResponseEntity.ok(new CommonResponse(true, result));
     }
 
     @Override
     public ResponseEntity<byte[]> getImage(String idNumber, String imageId) {
         Vehicle vehicle = this.find(idNumber);
 
-        // TODO: check if the image isn't belong to specified vehicle
         if (vehicle == null) return ResponseEntity.notFound().build();
 
-        // TODO: retrieve image name (along with vehicle idNumber) in the db, then check if the image exists
-        File file = null;// = this.uploadLocation.resolve(imageId).toAbsolutePath();
-        File[] files = this.uploadLocation.toAbsolutePath().toFile().listFiles();
+        List<VehicleImage> vehicleImages = this.imageRepository.findByVehicle(vehicle).stream().toList();
+        vehicleImages = vehicleImages.stream().filter(image -> {
+            String[] splitName = image.getStoredName().split("\\.");
 
+            if (splitName.length != 2) return false;
+
+            String fileNameWithoutType = splitName[0];
+
+            return fileNameWithoutType.equals(imageId) || image.getStoredName().equals(imageId);
+        }).toList();
+
+        // check if the image belongs to the specified vehicle exists => vehicleImages.size() must be 1
+        if (vehicleImages.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (vehicleImages.size() > 1) {
+            throw new RuntimeException("Exist %s files with the same name \"%s\"".formatted(
+                    vehicleImages.size(), imageId
+            ));
+        }
+
+        File file = null;
+        File[] files = this.uploadLocation.toAbsolutePath().toFile().listFiles();
+        String fileType = "";
+
+        // traverse the upload directory to search for the image
         if (files != null) {
             for (File tmpFile : files) {
-                if (tmpFile.isFile() && tmpFile.getName().startsWith(imageId)) {
+                String[] splitName = tmpFile.getName().split("\\.");
+
+                if (!tmpFile.isFile() || splitName.length != 2) continue;
+
+                String fileNameWithoutType = splitName[0];
+
+                if (fileNameWithoutType.equals(imageId) || tmpFile.getName().equals(imageId)) {
                     file = tmpFile;
+                    fileType = splitName[1];
                     break;
                 }
             }
         }
 
         try {
-            if (file != null && Files.isReadable(file.toPath())) {
-                return ResponseEntity.ok(Files.readAllBytes(file.toPath()));
+            if (file != null && !fileType.isBlank() && Files.isReadable(file.toPath())) {
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, "image/%s".formatted(fileType))
+                        .body(Files.readAllBytes(file.toPath()));
+            } else if (file == null) {
+                // delete record in db if file doesn't exist
+                this.imageRepository.delete(vehicleImages.get(0));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -151,6 +196,7 @@ public class VehicleServiceImpl implements VehicleService {
         return ResponseEntity.notFound().build();
     }
 
+    // this method should be a transaction
     @Override
     public ResponseEntity<CommonResponse> uploadImages(String idNumber, VehicleImageUploadDTO dto) {
         if (dto.getImages() == null || dto.getImages().isEmpty() || dto.getImages().size() > 3) {
@@ -160,16 +206,15 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         Vehicle vehicle = this.find(idNumber);
+        Set<String> result = new HashSet<>();
 
         if (vehicle == null) return ResponseEntity.notFound().build();
 
         try {
             if (!Files.exists(this.uploadLocation)) Files.createDirectories(this.uploadLocation);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Cannot create upload directory");
         }
-
-        List<String> result = new ArrayList<>();
 
         for (MultipartFile image : dto.getImages()) {
             // check if file, filename and content type exist
@@ -207,23 +252,40 @@ public class VehicleServiceImpl implements VehicleService {
                 path = this.uploadLocation.resolve(newFilename).normalize().toAbsolutePath();
             } while (Files.exists(path));
 
+            // check if parent directory of file and the selected one are exactly the same
+            if (!path.getParent().equals(this.uploadLocation.toAbsolutePath())) {
+                throw new InvalidRequestException(
+                        String.format("Cannot save the file \"%s\". This error may come from the filename.", originalFilename)
+                );
+            }
+
+            // TEST
             log.info(String.format("VehicleServiceImpl::uploadImages - old/new filenames: %s/%s",
                     originalFilename, newFilename));
 
+            // store file
             try (InputStream inputStream = image.getInputStream()) {
-                do {
-                    Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
-                } while (!Files.exists(path));
+                Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
             // insert new record in database
+            if (Files.exists(path)) {
+                String URI = BASE_URI.concat(String.format("/%s/images/%s", idNumber, newFilename));
+                VehicleImage vehicleImage = VehicleImage.builder()
+                        .storedName(newFilename)
+                        .originalName(originalFilename)
+                        .URI(URI)
+                        .vehicle(vehicle)
+                        .build();
 
-            result.add(this.BASE_URI.concat(String.format("/%s/images/%s", idNumber, newFilename)));
+                this.imageRepository.save(vehicleImage);
+                result.add(URI);
+            }
         }
 
-        return ResponseEntity.created(URI.create(this.BASE_URI.concat("/" + idNumber + "/images")))
+        return ResponseEntity.created(URI.create(BASE_URI.concat("/" + idNumber + "/images")))
                 .body(new CommonResponse(true, result));
     }
 
