@@ -45,7 +45,6 @@ public class PersonController {
 
     @PostMapping
     public ResponseEntity<CommonResponse> create(@RequestBody @Valid PersonCreationDTO data) {
-        // TODO: prevent creating a person with identity that is similar to any route
         return this.service.save(data);
     }
 

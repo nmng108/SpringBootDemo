@@ -13,6 +13,7 @@ import com.example.demo.entity.Person;
 import com.example.demo.entity.Vehicle;
 import com.example.demo.entity.VehicleImage;
 import com.example.demo.exception.InvalidRequestException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.service.VehicleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,12 +74,12 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     public ResponseEntity<CommonResponse> save(VehicleCreationDTO data) {
         Person person = this.personRepository.findByIdentity(data.getOwnerIdentity());
-        if (person == null) return ResponseEntity.notFound().build();
+        if (person == null) throw new ResourceNotFoundException();
 
         Vehicle vehicle = this.vehicleRepository.findByIdentificationNumber(data.getIdNumber());
 
         if (vehicle != null) {
-            throw new InvalidRequestException("Vehicle with idNumber " + data.getIdNumber() + " has existed");
+            throw new InvalidRequestException("Vehicle with idNumber %s has existed".formatted(data.getIdNumber()));
         }
 
         vehicle = this.vehicleRepository.save(new Vehicle(data, person));
