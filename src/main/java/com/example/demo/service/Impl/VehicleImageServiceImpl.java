@@ -37,7 +37,7 @@ public class VehicleImageServiceImpl implements VehicleImageService {
     private final Path uploadLocation;
     private final URI BASE_URI;
 
-    private final int MAX_IMAGES_PER_VEHICLE = 3;
+    private final int MAX_IMAGES;
 
     public VehicleImageServiceImpl(
             VehicleService vehicleService, VehicleImageRepository imageRepository,
@@ -49,14 +49,14 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         this.storageProperties = Objects.requireNonNull(storageProperties);
         this.uploadLocation = Path.of(storageProperties.getVehicleImageLocation());
 
+        if (!Files.exists(this.uploadLocation)) Files.createDirectories(this.uploadLocation);
+
         String HOSTNAME = Inet4Address.getLocalHost().getHostAddress();
         String PORT = environment.getProperty("server.port");
         String BASE_PATH = "/api/vehicles";
         this.BASE_URI = URI.create("http://%s:%s%s".formatted(HOSTNAME, PORT, BASE_PATH));
 
-        log.info("Base URI for Vehicle services: {}", this.BASE_URI);
-
-        if (!Files.exists(this.uploadLocation)) Files.createDirectories(this.uploadLocation);
+        this.MAX_IMAGES = storageProperties.getMaxImagesPerVehicle();
     }
 
     @Override
@@ -153,9 +153,9 @@ public class VehicleImageServiceImpl implements VehicleImageService {
 
         Set<VehicleImage> storedImages = this.imageRepository.findByVehicle(vehicle); // for counting purpose only
 
-        if (storedImages.size() + dto.getImages().size() > MAX_IMAGES_PER_VEHICLE) {
+        if (storedImages.size() + dto.getImages().size() > MAX_IMAGES) {
             throw new InvalidRequestException(
-                    "Remaining number of images can be uploaded is %d".formatted(MAX_IMAGES_PER_VEHICLE - storedImages.size())
+                    "Remaining number of images can be uploaded is %d".formatted(MAX_IMAGES - storedImages.size())
             );
         }
 
@@ -229,9 +229,9 @@ public class VehicleImageServiceImpl implements VehicleImageService {
     }
 
     private void validateImages(List<MultipartFile> images) {
-        if (images == null || images.isEmpty() || images.size() > MAX_IMAGES_PER_VEHICLE) {
+        if (images == null || images.isEmpty() || images.size() > MAX_IMAGES) {
             throw new InvalidRequestException("Maximum number of images to be uploaded is %d"
-                    .formatted(MAX_IMAGES_PER_VEHICLE));
+                    .formatted(MAX_IMAGES));
         }
 
         for (MultipartFile image : images) {

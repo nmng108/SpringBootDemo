@@ -32,7 +32,7 @@ public class VehicleImage {
     @Column(nullable = true, length = 150)
     private String URI;
 
-    @JoinColumn
+    @JoinColumn(name = "vehicle_id")
     @ManyToOne
     private Vehicle vehicle;
 

@@ -15,12 +15,14 @@ import java.util.Set;
 @Getter
 @Setter
 public class StorageProperties {
-    private String location = "uploads";
-    private String vehicleImageLocation = this.location.concat("/vehicle-images");
+    private final String location = "uploads";
+
+    private final String vehicleImageLocation = this.location.concat("/vehicle-images");
+    private final int maxImagesPerVehicle = 3;
 
     @DataSizeUnit(DataUnit.MEGABYTES)
-    private DataSize maxImageSizeInMB = DataSize.ofMegabytes(5);
-    private Set<String> allowedImageTypes = new HashSet<>();
+    private final DataSize maxImageSizeInMB = DataSize.ofMegabytes(5);
+    private final Set<String> allowedImageTypes = new HashSet<>();
 
     public StorageProperties() {
         this.allowedImageTypes.addAll(Arrays.asList("png", "jpg", "jpeg"));

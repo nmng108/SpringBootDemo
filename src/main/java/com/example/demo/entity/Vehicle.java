@@ -38,10 +38,6 @@ public class Vehicle {
     @ManyToOne
     private Person owner;
 
-    @OneToMany(mappedBy = "vehicle", targetEntity = VehicleImage.class)
-    @JsonBackReference
-    private List<VehicleImage> images;
-
     private VehicleType type;
 
     @Column(length = 15)
@@ -51,6 +47,10 @@ public class Vehicle {
     private String model;
     //    @NotBlank(message = "birthDate must not be empty")
     private Date acquisitionDate;
+
+    @OneToMany(mappedBy = "vehicle", targetEntity = VehicleImage.class)
+    @JsonBackReference
+    private List<VehicleImage> images;
 
     @Column(nullable = false)
     @CreatedDate

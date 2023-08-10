@@ -43,7 +43,6 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     public ResponseEntity<CommonResponse> findByIdOrIdNumber(String idNumber) {
-        // TODO: fix db query which cannot retrieve vehicle image info
         Vehicle vehicle = this.find(idNumber);
 
         if (vehicle == null) throw new ResourceNotFoundException();
