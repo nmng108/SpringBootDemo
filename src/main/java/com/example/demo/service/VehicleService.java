@@ -1,9 +1,8 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.request.PersonUpdateDTO;
 import com.example.demo.dto.request.VehicleCreationDTO;
-import com.example.demo.dto.request.VehicleImageUploadDTO;
 import com.example.demo.dto.response.CommonResponse;
+import com.example.demo.entity.Vehicle;
 import org.springframework.http.ResponseEntity;
 
 public interface VehicleService {
@@ -15,13 +14,9 @@ public interface VehicleService {
 
     ResponseEntity<CommonResponse> save(VehicleCreationDTO data);
 
-    ResponseEntity<CommonResponse> updateByIdNumber(int id, PersonUpdateDTO form);
+    ResponseEntity<CommonResponse> updateByIdNumber(int id, Object dto);
 
     ResponseEntity<CommonResponse> delete(int id);
 
-    ResponseEntity<CommonResponse> getImageAddresses(String idNumber);
-
-    ResponseEntity<?> getImage(String idNumber, String imageId);
-
-    ResponseEntity<CommonResponse> uploadImages(String idNumber, VehicleImageUploadDTO dto);
+    Vehicle find(String idNumber);
 }

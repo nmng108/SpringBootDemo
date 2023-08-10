@@ -2,6 +2,7 @@ package com.example.demo.dto.response;
 
 import com.example.demo.dto.request.VehicleType;
 import com.example.demo.entity.Vehicle;
+import com.example.demo.entity.VehicleImage;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -9,6 +10,7 @@ import org.hibernate.validator.constraints.Length;
 
 import java.sql.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -39,6 +41,8 @@ public class VehicleDTO {
     @NotNull
     private Date acquisitionDate;
 
+    private List<ImageDTO> images;
+
     public VehicleDTO(Vehicle vehicle) {
         this.idNumber = vehicle.getIdentificationNumber();
         this.type = vehicle.getType();
@@ -49,6 +53,20 @@ public class VehicleDTO {
         this.owner = new HashMap<>();
         this.owner.put("identity", vehicle.getOwner().getIdentity());
         this.owner.put("name", vehicle.getOwner().getName());
+
+        this.images = vehicle.getImages().stream().map(ImageDTO::new).toList();
+    }
+
+    @Data
+    public static class ImageDTO {
+        private String originalName;
+        private String URI;
+        private String method = "GET";
+
+        public ImageDTO(VehicleImage image) {
+            this.originalName = image.getOriginalName();
+            this.URI = image.getURI();
+        }
     }
 }
 

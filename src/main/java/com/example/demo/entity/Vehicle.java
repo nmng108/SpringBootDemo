@@ -15,6 +15,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Date;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 @Builder
@@ -37,9 +38,9 @@ public class Vehicle {
     @ManyToOne
     private Person owner;
 
-    @OneToMany(mappedBy = "vehicle")
+    @OneToMany(mappedBy = "vehicle", targetEntity = VehicleImage.class)
     @JsonBackReference
-    private Set<VehicleImage> images;
+    private List<VehicleImage> images;
 
     private VehicleType type;
 

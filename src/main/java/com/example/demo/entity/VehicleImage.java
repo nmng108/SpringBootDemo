@@ -29,10 +29,10 @@ public class VehicleImage {
     @Column(nullable = false, length = 160)
     private String originalName;
 
-    @Column(length = 150)
+    @Column(nullable = true, length = 150)
     private String URI;
 
-    //    @JoinColumn
+    @JoinColumn
     @ManyToOne
     private Vehicle vehicle;
 

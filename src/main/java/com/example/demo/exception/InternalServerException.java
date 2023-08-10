@@ -14,6 +14,10 @@ public class InternalServerException extends HttpException {
         super(HTTP_STATUS_CODE);
     }
 
+    public InternalServerException(Throwable cause) {
+        super(cause);
+    }
+
     public InternalServerException(String message) {
         super(HTTP_STATUS_CODE, ERROR_CODE, message);
     }

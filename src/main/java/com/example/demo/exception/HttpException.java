@@ -18,11 +18,30 @@ public class HttpException extends RuntimeException {
         super();
     }
 
+    public HttpException(Throwable throwable) {
+        super(throwable);
+    }
+
+    public HttpException(String responseMessage, Throwable throwable) {
+        super(responseMessage, throwable);
+    }
+
     // response without body
     public HttpException(int httpStatusCode) {
         super();
+
         if (httpStatusCode < 400 || httpStatusCode >= 600) {
-            throw new RuntimeException("Wrong status code. Error status code must be larger than 400");
+            throw new RuntimeException("Wrong error status code.");
+        }
+
+        this.httpStatusCode = httpStatusCode;
+    }
+
+    public HttpException(int httpStatusCode, Throwable cause) {
+        super(cause);
+
+        if (httpStatusCode < 400 || httpStatusCode >= 600) {
+            throw new RuntimeException("Wrong error status code.");
         }
 
         this.httpStatusCode = httpStatusCode;
