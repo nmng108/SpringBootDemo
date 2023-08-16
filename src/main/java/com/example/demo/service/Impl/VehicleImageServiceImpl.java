@@ -16,12 +16,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Inet4Address;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,7 +38,8 @@ public class VehicleImageServiceImpl implements VehicleImageService {
     private final VehicleImageRepository imageRepository;
     private final StorageProperties storageProperties;
     private final Path uploadLocation;
-    private final URI BASE_URI;
+    private final String BASE_PATH = "/vehicles";
+    private final String BASE_URI;
 
     private final int MAX_IMAGES;
 
@@ -47,14 +51,13 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         this.vehicleService = Objects.requireNonNull(vehicleService);
         this.imageRepository = Objects.requireNonNull(imageRepository);
         this.storageProperties = Objects.requireNonNull(storageProperties);
-        this.uploadLocation = Path.of(storageProperties.getVehicleImageLocation());
+        this.uploadLocation = Path.of(storageProperties.getVehicleImageLocation()).toAbsolutePath();
 
         if (!Files.exists(this.uploadLocation)) Files.createDirectories(this.uploadLocation);
 
-        String HOSTNAME = Inet4Address.getLocalHost().getHostAddress();
+        String HOSTNAME = environment.getProperty("server.hostname");
         String PORT = environment.getProperty("server.port");
-        String BASE_PATH = "/api/vehicles";
-        this.BASE_URI = URI.create("http://%s:%s%s".formatted(HOSTNAME, PORT, BASE_PATH));
+        this.BASE_URI = URI.create("http://%s:%s/api".formatted(HOSTNAME, PORT)).toString();
 
         this.MAX_IMAGES = storageProperties.getMaxImagesPerVehicle();
     }
@@ -70,8 +73,7 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         if (vehicleImages.isEmpty()) throw new ResourceNotFoundException();
 
         List<String> result = vehicleImages.stream()
-                .map(image -> "%s://%s:%s%s".formatted(
-                        BASE_URI.getScheme(), BASE_URI.getHost(), BASE_URI.getPort(), image.getURI()))
+                .map(image -> BASE_URI.concat(image.getURI()))
                 .toList();
 
         return ResponseEntity.ok(new CommonResponse(true, result));
@@ -106,7 +108,7 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         }
 
         File file = null;
-        File[] files = this.uploadLocation.toAbsolutePath().toFile().listFiles();
+        File[] files = this.uploadLocation.toFile().listFiles();
         String fileType = "";
 
         // traverse the upload directory to search for the image
@@ -142,8 +144,9 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         throw new ResourceNotFoundException();
     }
 
-    // this method should be made as a transaction
+    // try adding/updating images through updating the persisted vehicle entity (utilize the persistence context mechanism)
     @Override
+    @Transactional
     public ResponseEntity<CommonResponse> uploadImages(String vehicleIdNumber, VehicleImageUploadDTO dto) {
         this.validateImages(dto.getImages());
 
@@ -151,37 +154,46 @@ public class VehicleImageServiceImpl implements VehicleImageService {
 
         if (vehicle == null) throw new ResourceNotFoundException();
 
-        Set<VehicleImage> storedImages = this.imageRepository.findByVehicle(vehicle); // for counting purpose only
+        // for counting purpose only
+        int storedImages = vehicle.getImages().size();
+//        int storedImages = this.imageRepository.findByVehicle(vehicle).size();
 
-        if (storedImages.size() + dto.getImages().size() > MAX_IMAGES) {
+        if (storedImages + dto.getImages().size() > MAX_IMAGES) {
             throw new InvalidRequestException(
-                    "Remaining number of images can be uploaded is %d".formatted(MAX_IMAGES - storedImages.size())
+                    "Remaining number of images can be uploaded is %d".formatted(MAX_IMAGES - storedImages)
             );
         }
 
+        // try to create the upload directory again if it doesn't exist (which may be created in bootstrap)
         try {
             if (!Files.exists(this.uploadLocation)) Files.createDirectories(this.uploadLocation);
         } catch (IOException e) {
-            throw new InternalServerException("Cannot create upload directory");
+            throw new InternalServerException("Cannot create the upload directory");
         }
 
         Set<String> result = new HashSet<>();
 
         for (MultipartFile image : dto.getImages()) {
-            String[] contentType = Objects.requireNonNull(image.getContentType()).split("/");
+            String[] contentType = Objects.requireNonNull(image.getContentType()).split("/"); // checked before
             String fileType = contentType[1];
-            String originalFilename = Objects.requireNonNull(image.getOriginalFilename()).strip();
-            String newFilename;
+            String originalFilename = Objects.requireNonNull(image.getOriginalFilename()).strip(); // checked before
+            String storedFilename;
             Path path;
 
+            // generate an unique filename
             do {
-                newFilename = UUID.randomUUID().toString().concat(".").concat(fileType);
-                path = this.uploadLocation.resolve(newFilename).normalize().toAbsolutePath();
+                storedFilename = UUID.randomUUID().toString().concat(".").concat(fileType);
+                path = this.uploadLocation.resolve(storedFilename).normalize();
             } while (Files.exists(path));
 
-            // TEST
-            log.info(String.format("VehicleServiceImpl::uploadImages - original/new filenames: %s/%s",
-                    originalFilename, newFilename));
+            // Test the custom transaction rollback
+            if (fileType.matches("(jpg)|(jpeg)")) {
+                log.error("uploadImages - Stopped saving at the image %s".formatted(originalFilename));
+                throw new InvalidRequestException("jpg file is currently not allowed");
+            }
+
+            // register a file cleanup transaction listener, which will remove files if rollback transaction
+            TransactionSynchronizationManager.registerSynchronization(new FileCleanupTransactionListener(path));
 
             // store image
             try (InputStream inputStream = image.getInputStream()) {
@@ -192,11 +204,14 @@ public class VehicleImageServiceImpl implements VehicleImageService {
 
             // insert new record containing the image information to database
             if (Files.exists(path)) {
-                URI newImageUri = BASE_URI.resolve("/%s/images/%s".formatted(vehicleIdNumber, newFilename));
+                // We will save uriPath "/vehicles/..." in db, which does not contain "/api" in the string.
+                // This will help in case APIs are versioned like "/api/v1/vehicles/..."
+                String uriPath = this.BASE_PATH.concat("/%s/images/%s".formatted(vehicleIdNumber, storedFilename));
+                URI newImageUri = URI.create(this.BASE_URI.concat(uriPath));
                 VehicleImage vehicleImage = VehicleImage.builder()
-                        .storedName(newFilename)
+                        .storedName(storedFilename)
                         .originalName(originalFilename)
-                        .URI(newImageUri.getPath())
+                        .URI(uriPath)
                         .vehicle(vehicle)
                         .build();
 
@@ -205,8 +220,9 @@ public class VehicleImageServiceImpl implements VehicleImageService {
             }
         }
 
-        return ResponseEntity.created(BASE_URI.resolve("/" + vehicleIdNumber + "/images"))
-                .body(new CommonResponse(true, result));
+        return ResponseEntity.created(URI.create(
+                BASE_URI.concat("%s/%s/images".formatted(this.BASE_PATH, vehicleIdNumber)))
+        ).body(new CommonResponse(true, result));
     }
 
 
@@ -217,9 +233,27 @@ public class VehicleImageServiceImpl implements VehicleImageService {
     }
 
     @Override
+    @Transactional
     public ResponseEntity<CommonResponse> delete(String vehicleIdNumber) {
         // TODO: implement delete
-        return null;
+        Vehicle vehicle = this.vehicleService.find(vehicleIdNumber);
+        if (vehicle == null) return ResponseEntity.notFound().build();
+
+        log.info("Vehicle images to be deleted: {}", vehicle);
+
+        try {
+            for (VehicleImage image : vehicle.getImages()) {
+                Path imagePath = this.uploadLocation.resolve(image.getStoredName());
+                this.imageRepository.delete(image);
+                TransactionSynchronizationManager.registerSynchronization(new FileRestoreTransactionListener(imagePath));
+                Files.deleteIfExists(imagePath);
+                if (!Files.exists(imagePath)) log.info("Deleted {}", image.getStoredName());
+            }
+        } catch (IOException e) {
+            throw new InternalServerException(e);
+        }
+
+        return ResponseEntity.noContent().build();
     }
 
     @Override
@@ -228,10 +262,15 @@ public class VehicleImageServiceImpl implements VehicleImageService {
         return null;
     }
 
+    // should return some file information like file type... instead of calculate them again
     private void validateImages(List<MultipartFile> images) {
-        if (images == null || images.isEmpty() || images.size() > MAX_IMAGES) {
-            throw new InvalidRequestException("Maximum number of images to be uploaded is %d"
-                    .formatted(MAX_IMAGES));
+        if (images == null) {
+            throw new InvalidRequestException("No image presented");
+        }
+
+        if (images.isEmpty() || images.size() > MAX_IMAGES) {
+            throw new InvalidRequestException("Number of images to be uploaded is in range from %d to %d"
+                    .formatted(1, MAX_IMAGES));
         }
 
         for (MultipartFile image : images) {
@@ -251,35 +290,102 @@ public class VehicleImageServiceImpl implements VehicleImageService {
             if (invalidFilename)
                 throw new InvalidRequestException("Invalid file name: %s".formatted(image.getOriginalFilename()));
             if (invalidContentType)
-                throw new InvalidRequestException("Invalid ContentType: %s".formatted(image.getContentType()));
+                throw new InvalidRequestException("Invalid Content-Type: %s".formatted(image.getContentType()));
 
             // check file type
             String[] contentType = image.getContentType().split("/");
-            String[] filename = image.getOriginalFilename().split("/");
+            String[] filename = image.getOriginalFilename().split("\\.");
+            String filenameExtension = filename[filename.length - 1];
 
             boolean isNotAllowedType = !this.storageProperties.getAllowedImageTypes().contains(contentType[1]);
+            boolean matchJpegCase = contentType[1].matches("(jpg)|(jpeg)") && filenameExtension.matches("(jpg)|(jpeg)");
+            boolean fileExtensionNotMatched = !contentType[1].equalsIgnoreCase(filenameExtension) && !matchJpegCase;
 
-            if (isNotAllowedType || !contentType[1].equalsIgnoreCase(filename[filename.length - 1])) {
-                throw new InvalidRequestException("ContentType \"%s\" is not allowed".formatted(image.getContentType()));
+            if (isNotAllowedType || fileExtensionNotMatched) {
+                throw new InvalidRequestException("Content-Type \"%s\" is not allowed".formatted(image.getContentType()));
             }
 
             // check file size
+            // The file size is checked once by spring before approaching this method
             if (this.storageProperties.getMaxImageSizeInMB().toBytes() < image.getSize()) {
                 throw new InvalidRequestException("File size of \"%s\" is larger than the allowed amount"
                         .formatted(image.getOriginalFilename()));
             }
 
-            // safe-check if parent directory of file and the pre-selected directory are exactly the same
+            // safe-check if parent directory of the files and the pre-selected directory are exactly the same
             Path parentPath = this.uploadLocation.resolve(image.getOriginalFilename())
                     .normalize().toAbsolutePath().getParent();
 
-            if (!parentPath.equals(this.uploadLocation.toAbsolutePath())) {
+            if (!parentPath.equals(this.uploadLocation)) {
                 throw new InvalidRequestException(
                         "Cannot save the file \"%s\". This error may come from the filename."
                                 .formatted(image.getOriginalFilename())
                 );
             }
         }
+    }
+}
 
+@Slf4j
+class FileCleanupTransactionListener implements TransactionSynchronization {
+    private final List<Path> paths;
+
+    public FileCleanupTransactionListener(Path... paths) {
+        this.paths = Arrays.asList(paths);
+    }
+
+    @Override
+    public void afterCompletion(int status) {
+        if (status == STATUS_ROLLED_BACK) {
+            for (Path path : paths) {
+                try {
+                    if (!Files.isWritable(path)) {
+                        log.warn("The file {} is not writable", path.toAbsolutePath());
+                    }
+
+                    if (!Files.deleteIfExists(path)) {
+                        log.info("The file/directory \"{}\" does not exist.", path.toAbsolutePath());
+                    }
+                } catch (IOException e) {
+                    log.warn("An I/O exception happened while deleting {}", path.toAbsolutePath());
+                    throw new InternalServerException(e);
+                }
+            }
+
+            log.info("Cleaned up uploaded files");
+        }
+    }
+}
+
+@Slf4j
+class FileRestoreTransactionListener implements TransactionSynchronization {
+    private final byte[] input;
+    private final Path destination;
+
+    public FileRestoreTransactionListener(byte[] input, Path destination) {
+        this.input = input;
+        this.destination = destination;
+    }
+
+    // use this constructor before deleting file
+    public FileRestoreTransactionListener(Path path) throws IOException {
+        this.input = Files.readAllBytes(path);
+        this.destination = path;
+    }
+
+    @Override
+    public void afterCompletion(int status) {
+        if (status == STATUS_ROLLED_BACK) {
+            try {
+                if (!Files.exists(destination)) {
+                    Files.copy(new ByteArrayInputStream(this.input), destination);
+                }
+            } catch (IOException e) {
+                log.warn("An I/O exception happened while reverting {}", destination.toAbsolutePath());
+                throw new InternalServerException(e);
+            }
+
+            log.info("Reverting file %s is done".formatted(this.destination));
+        }
     }
 }

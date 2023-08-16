@@ -11,6 +11,7 @@ import com.example.demo.exception.InvalidRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.service.VehicleService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,14 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
+    @Cacheable("vehicle-service")
     public ResponseEntity<CommonResponse> findAll() {
+        try {
+            Thread.sleep(4000L);
+        } catch (Exception e) {
+            log.debug(e.getLocalizedMessage());
+        }
+
         return ResponseEntity.ok(new CommonResponse(true,
                 this.vehicleRepository.findAll().stream().map(VehicleDTO::new).toList()
         ));

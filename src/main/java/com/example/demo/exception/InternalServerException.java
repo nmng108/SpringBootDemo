@@ -1,8 +1,8 @@
 package com.example.demo.exception;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class InternalServerException extends HttpException {
     private static final int HTTP_STATUS_CODE = 500;
     private static final String ERROR_CODE = "E20";
@@ -14,8 +14,9 @@ public class InternalServerException extends HttpException {
         super(HTTP_STATUS_CODE);
     }
 
-    public InternalServerException(Throwable cause) {
-        super(cause);
+    public InternalServerException(Throwable throwable) {
+        super(throwable);
+        log.warn(throwable.getLocalizedMessage());
     }
 
     public InternalServerException(String message) {

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ResourceNotFoundException extends HttpException {
-    private static final int HTTP_STATUS_CODE = 400;
+    private static final int HTTP_STATUS_CODE = 404;
     private static final String ERROR_CODE = "E10";
 
     public ResourceNotFoundException() {

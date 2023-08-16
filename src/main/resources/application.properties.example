@@ -1,7 +1,19 @@
-spring.datasource.url=jdbc:mysql://localhost:3306/springdemo
+spring.application.name = demoapp
+server.port=8000
+
+#spring.datasource.url=jdbc:mysql://localhost:3306/springdemo
 spring.datasource.username=root
 spring.datasource.password=
 
-#spring.jpa.hibernate.ddl-auto=none
-#spring.jpa.show-sql=true
-#spring.jpa.properties.hibernate.format_sql=true
+#spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+spring.data.rest.basePath=/api/data
+
+spring.servlet.multipart.max-file-size=3MB
+spring.servlet.multipart.max-request-size=4MB
+
+#spring.thymeleaf.cache=false
+
+logging.level.=debug

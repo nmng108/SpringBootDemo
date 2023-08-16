@@ -3,7 +3,6 @@ package com.example.demo.exception;
 
 import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.dto.response.SuccessState;
-import lombok.Getter;
 import org.springframework.http.ResponseEntity;
 
 import java.util.HashMap;
@@ -37,8 +36,8 @@ public class HttpException extends RuntimeException {
         this.httpStatusCode = httpStatusCode;
     }
 
-    public HttpException(int httpStatusCode, Throwable cause) {
-        super(cause);
+    public HttpException(int httpStatusCode, Throwable throwable) {
+        super(throwable);
 
         if (httpStatusCode < 400 || httpStatusCode >= 600) {
             throw new RuntimeException("Wrong error status code.");

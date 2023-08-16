@@ -62,4 +62,9 @@ public class VehicleController {
                                                              @Valid VehicleImageUploadDTO dto) {
         return this.vehicleImageService.uploadImages(idNumber, dto);
     }
+
+    @DeleteMapping({"/{id-number}/images", "/{id-number}/images/"})
+    public ResponseEntity<CommonResponse> deleteImagesFromVehicle(@PathVariable("id-number") @NotBlank String idNumber) {
+        return this.vehicleImageService.delete(idNumber);
+    }
 }
