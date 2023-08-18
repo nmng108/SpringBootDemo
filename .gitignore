@@ -1,6 +1,6 @@
 .idea
 target
-uploads
+#uploads
 mvnw*
 HELP.md
 src/main/resources/application.properties

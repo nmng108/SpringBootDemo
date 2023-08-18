@@ -21,10 +21,10 @@ import java.util.Objects;
 
 @Service
 public class PersonServiceImpl implements PersonService {
-    private PersonRepository repository;
+    private final PersonRepository personRepository;
 
     public PersonServiceImpl(PersonRepository personRepository) {
-        this.repository = Objects.requireNonNull(personRepository);
+        this.personRepository = Objects.requireNonNull(personRepository);
     }
 
 //    @Override
@@ -52,9 +52,9 @@ public class PersonServiceImpl implements PersonService {
     public ResponseEntity<?> findByCriteria(PersonSearchDTO dto) {
         DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
         Long counter = dto.getCount() != null
-                ? (dto.getCount().equals(true) ? this.repository.countByCriteria(personSearch) : null)
+                ? (dto.getCount().equals(true) ? this.personRepository.countByCriteria(personSearch) : null)
                 : null;
-        List<Person> result = this.repository.findByCriteria(personSearch);
+        List<Person> result = this.personRepository.findByCriteria(personSearch);
 
         return ResponseEntity.ok(dto.getPage() != null
                 ? new PaginationSuccessResponse<>(true, result.stream().map(PersonDTO::new).toList(), counter, (long) dto.getSize())
@@ -70,7 +70,7 @@ public class PersonServiceImpl implements PersonService {
 
         Person newPerson = new Person(dto);
 
-        newPerson = this.repository.save(newPerson);
+        newPerson = this.personRepository.save(newPerson);
 
         return ResponseEntity
                 .created(URI.create("/api/persons/" + newPerson.getId()))
@@ -100,14 +100,14 @@ public class PersonServiceImpl implements PersonService {
         if (dto.getAddress() != null) modifiedPerson.setAddress(dto.getAddress());
         if (dto.getIdentity() != null) modifiedPerson.setIdentity(dto.getIdentity());
 
-        modifiedPerson = this.repository.save(modifiedPerson);
+        modifiedPerson = this.personRepository.save(modifiedPerson);
 
         return ResponseEntity.ok(new CommonResponse(true, modifiedPerson));
     }
 
     @Override
     public ResponseEntity<CommonResponse> delete(int id) {
-        this.repository.deleteById(id);
+        this.personRepository.deleteById(id);
         return ResponseEntity.ok(new CommonResponse(true, "Person with id " + id + "has been deleted."));
     }
 
@@ -115,17 +115,17 @@ public class PersonServiceImpl implements PersonService {
         Person person;
 
         try {
-            person = this.repository.findById(Integer.parseInt(identity)).orElse(null);
-            if (person == null) person = this.repository.findByIdentity(identity);
+            person = this.personRepository.findById(Integer.parseInt(identity)).orElse(null);
+            if (person == null) person = this.personRepository.findByIdentity(identity);
         } catch (NumberFormatException e) {
-            person = this.repository.findByIdentity(identity);
+            person = this.personRepository.findByIdentity(identity);
         }
 
         return person;
     }
 
     private ResponseEntity<CommonResponse> checkIfIdentityHasExisted(String identity) {
-        Person existingPerson = this.repository.findByIdentity(identity);
+        Person existingPerson = this.personRepository.findByIdentity(identity);
 
         if (existingPerson != null) {
             HashMap<String, String> error = new HashMap<>();

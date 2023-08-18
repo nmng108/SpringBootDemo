@@ -11,6 +11,7 @@ import com.example.demo.exception.InvalidRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.service.VehicleImageService;
 import com.example.demo.service.VehicleService;
+import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
@@ -40,12 +41,11 @@ public class VehicleImageServiceImpl implements VehicleImageService {
     private final Path uploadLocation;
     private final String BASE_PATH = "/vehicles";
     private final String BASE_URI;
-
     private final int MAX_IMAGES;
 
     public VehicleImageServiceImpl(
             VehicleService vehicleService, VehicleImageRepository imageRepository,
-            StorageProperties storageProperties, Environment environment
+            StorageProperties storageProperties, Environment environment, EntityManager entityManager
     ) throws IOException {
 
         this.vehicleService = Objects.requireNonNull(vehicleService);
@@ -57,7 +57,7 @@ public class VehicleImageServiceImpl implements VehicleImageService {
 
         String HOSTNAME = environment.getProperty("server.hostname");
         String PORT = environment.getProperty("server.port");
-        this.BASE_URI = URI.create("http://%s:%s/api".formatted(HOSTNAME, PORT)).toString();
+        this.BASE_URI = URI.create("http://%s:%s/api/".formatted(HOSTNAME, PORT)).toString();
 
         this.MAX_IMAGES = storageProperties.getMaxImagesPerVehicle();
     }
@@ -171,7 +171,8 @@ public class VehicleImageServiceImpl implements VehicleImageService {
             throw new InternalServerException("Cannot create the upload directory");
         }
 
-        Set<String> result = new HashSet<>();
+        String allImagesBasePath = URI.create(this.BASE_PATH.concat("/%s/images".formatted(vehicleIdNumber))).toString();
+        Set<String> imagePaths = new HashSet<>();
 
         for (MultipartFile image : dto.getImages()) {
             String[] contentType = Objects.requireNonNull(image.getContentType()).split("/"); // checked before
@@ -204,25 +205,25 @@ public class VehicleImageServiceImpl implements VehicleImageService {
 
             // insert new record containing the image information to database
             if (Files.exists(path)) {
-                // We will save uriPath "/vehicles/..." in db, which does not contain "/api" in the string.
+                // We will save uriPath "/vehicles/..." in db, which does not contain "http.../api" in the string.
                 // This will help in case APIs are versioned like "/api/v1/vehicles/..."
-                String uriPath = this.BASE_PATH.concat("/%s/images/%s".formatted(vehicleIdNumber, storedFilename));
-                URI newImageUri = URI.create(this.BASE_URI.concat(uriPath));
+                String specificPath = URI.create(allImagesBasePath.concat("/%s".formatted(storedFilename))).toString();
+                String newImageUri = URI.create(this.BASE_URI.concat(specificPath)).toString();
                 VehicleImage vehicleImage = VehicleImage.builder()
                         .storedName(storedFilename)
                         .originalName(originalFilename)
-                        .URI(uriPath)
+                        .URI(specificPath)
                         .vehicle(vehicle)
                         .build();
 
                 this.imageRepository.save(vehicleImage);
-                result.add(newImageUri.toString());
+                imagePaths.add(newImageUri);
             }
         }
 
         return ResponseEntity.created(URI.create(
-                BASE_URI.concat("%s/%s/images".formatted(this.BASE_PATH, vehicleIdNumber)))
-        ).body(new CommonResponse(true, result));
+                this.BASE_URI.concat(allImagesBasePath)
+        )).body(new CommonResponse(true, imagePaths));
     }
 
 
