@@ -1,45 +1,43 @@
 package com.example.demo.model;
 
+import com.example.demo.dto.request.SearchDTO;
+import com.example.demo.exception.InternalServerException;
 import com.example.demo.exception.InvalidRequestException;
-import com.example.demo.dto.request.PersonSearchDTO;
-import com.example.demo.entity.Person;
 import jakarta.persistence.criteria.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.data.domain.Sort;
 
-import java.sql.Date;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Data
-public class DatabasePersonSearch {
-    Map<String, Condition> criteria;
-    boolean usingOr;
-    Sort sort;
-    Pagination pagination;
+public abstract class EntitySearchModel<T extends SearchDTO> {
+    protected Map<String, Condition> criteria;
+    protected boolean usingOr;
+    protected Sort sort;
+    protected Pagination pagination;
 
-    public DatabasePersonSearch(PersonSearchDTO personSearchDTO) {
-        this.criteria = this.constructsCriteria(personSearchDTO);
-        this.usingOr = this.constructsMode(personSearchDTO.getMode());
-        this.sort = this.constructsSort(personSearchDTO.getSortBy(), personSearchDTO.getOrder());
-        this.pagination = this.constructsPagination(personSearchDTO.getPage(), personSearchDTO.getSize());
+    public EntitySearchModel(T searchDTO) {
+        this.criteria = this.constructsCriteria(searchDTO);
+        this.usingOr = this.constructsMode(searchDTO.getMode());
+        this.sort = this.constructsSort(searchDTO.getSortBy(), searchDTO.getOrder());
+        this.pagination = this.constructsPagination(searchDTO.getPage(), searchDTO.getSize());
     }
 
-    // should add a regex or sth to specialize validation for each type of data ? DTO's validator did it
-    private static Condition formatCondition(String propertyName, String condition) {
-        // may put this into an "event" function that will be called after receiving and parsing request to PersonSearchDTO
+    protected static Condition formatCondition(String propertyName, String condition) {
+        // may put this into an "event" function that will be called after receiving and parsing request to SearchDTO
         if (propertyName == null) {
-            throw new RuntimeException("Property name is not found");
+            throw new InternalServerException("Property name is not found");
         }
 
         if (condition == null) {
             throw new InvalidRequestException("Value of " + propertyName + " cannot be null or blank");
         }
 
-        // may accept 'list' format here
+        // may accept & check the 'list' format here
 
         // apply a common regex to all property's conditions
         if (!condition.matches("^[a-zA-Z0-9-._]+( [a-zA-Z0-9-._]+)*$")) {
@@ -54,9 +52,8 @@ public class DatabasePersonSearch {
         }
 
         // at least 2 "words"
-        for (String operator : PersonSearchDTO.OPERATORS) {
+        for (String operator : SearchDTO.OPERATORS) {
             if (condition.startsWith(operator)) {
-//                String value = condition.substring(operator.concat(" ").length());
                 String value = condition.replaceFirst(operator.concat(" "), "");
 
                 return new Condition(propertyName, operator, value);
@@ -66,72 +63,51 @@ public class DatabasePersonSearch {
         throw new InvalidRequestException("Invalid operator of " + propertyName);
     }
 
-    private Map<String, Condition> constructsCriteria(PersonSearchDTO personSearchDTO) {
-        Map<String, Condition> stringCriteria = new HashMap<>();
-        // map DTO field names to entity's field names
-        if (personSearchDTO.getId() != null)
-            stringCriteria.put("id", formatCondition("id", personSearchDTO.getId()));
-        if (personSearchDTO.getName() != null)
-            stringCriteria.put("name", formatCondition("name", personSearchDTO.getName()));
-        if (personSearchDTO.getIdentity() != null)
-            stringCriteria.put("identity", formatCondition("identity", personSearchDTO.getIdentity()));
-        if (personSearchDTO.getAddress() != null)
-            stringCriteria.put("address", formatCondition("address", personSearchDTO.getAddress()));
-        if (personSearchDTO.getBirthDate() != null)
-            stringCriteria.put("birthDate", formatCondition("birthDate", personSearchDTO.getBirthDate()));
-        if (personSearchDTO.getHeight() != null)
-            stringCriteria.put("height", formatCondition("height", personSearchDTO.getHeight()));
-        if (personSearchDTO.getWeight() != null)
-            stringCriteria.put("weight", formatCondition("weight", personSearchDTO.getWeight()));
+    // relate to specific searchDto; need to be overridden
+    protected abstract Map<String, Condition> constructsCriteria(T searchDTO);
 
-        return stringCriteria;
-    }
-
-    public List<Predicate> criteriaToPredicates(CriteriaBuilder builder, Root<Person> personRoot) {
+    public <R> List<Predicate> criteriaToPredicates(CriteriaBuilder builder, Root<R> root) {
         return this.criteria.values().stream().map((condition) -> {
-            String propName = condition.getPropertyName();
-            String value = condition.getValue();
+            String attributeName = condition.getAttributeName();
 
             // catch exception from conversing user's String input to Date or Number
             try {
                 // assign an appropriate Expression<T> object to condition.expressionValue
+                // relate to specific searchDto
                 if (condition.getExpressionValue() == null) {
-                    condition.setExpressionValue(switch (propName) {
-                        case "id" -> builder.literal(Integer.parseInt(value)); // Expression<Integer>
-                        case "height", "weight" -> builder.literal(Double.parseDouble(value));  // Expression<Double>
-                        case "birthDate" -> builder.literal(Date.valueOf(value));
-                        default -> condition.getOperator().equals("like")
-                                ? builder.literal("%".concat(value).concat("%"))
-                                : builder.literal(value); // Expression<String>
-                    });
+                    condition.setExpressionValue(this.createExpression(builder, condition));
                 }
             } catch (NumberFormatException e) {
                 throw new InvalidRequestException(e.getMessage());
             }
 
             return switch (condition.getOperator()) {
-                case "like" ->
-                        builder.like(personRoot.get(propName), condition.getExpressionValue()); // allow some other data types and serve as "equal"
-                case "equal", "eq", "=" -> builder.equal(personRoot.get(propName), condition.getExpressionValue());
-                case "le", "<=" -> builder.lessThanOrEqualTo(personRoot.get(propName), condition.getExpressionValue());
-                case "lt", "<" -> builder.lessThan(personRoot.get(propName), condition.getExpressionValue());
+                // allow some other data types and serve as "equal"
+                case "like" -> builder.like(root.get(attributeName), condition.getExpressionValue());
+                case "equal", "eq", "=" -> builder.equal(root.get(attributeName), condition.getExpressionValue());
+                case "le", "<=" -> builder.lessThanOrEqualTo(root.get(attributeName), condition.getExpressionValue());
+                case "lt", "<" -> builder.lessThan(root.get(attributeName), condition.getExpressionValue());
                 case "ge", ">=" ->
-                        builder.greaterThanOrEqualTo(personRoot.get(propName), condition.getExpressionValue());
-                case "gt", ">" -> builder.greaterThan(personRoot.get(propName), condition.getExpressionValue());
+                        builder.greaterThanOrEqualTo(root.get(attributeName), condition.getExpressionValue());
+                case "gt", ">" -> builder.greaterThan(root.get(attributeName), condition.getExpressionValue());
                 default -> throw new RuntimeException("operator is not in the allowed types");
             };
         }).toList();
     }
 
+    // relate to specific searchDto; need to be overridden
+
+    protected abstract Expression<?> createExpression(CriteriaBuilder builder, Condition condition);
+
     /**
      * Use 'and' in conditional expression if there's no criterion passed by user
      *
-     * @param mode String = PersonSearchDTO.OR_SEARCH or PersonSearchDTO.AND_SEARCH
+     * @param mode String = SearchDTO.OR_SEARCH or SearchDTO.AND_SEARCH
      * @return boolean; true if using 'or' and there's at least 1 criterion, and false inversely.
      */
-    private boolean constructsMode(String mode) {
+    protected boolean constructsMode(String mode) {
         // may throw InvalidRequestException if mode is specified but there's no criterion
-        return mode != null && mode.equals(PersonSearchDTO.OR_SEARCH)
+        return mode != null && mode.equals(SearchDTO.OR_SEARCH)
                 && !this.criteria.isEmpty();
     }
 
@@ -142,12 +118,13 @@ public class DatabasePersonSearch {
      * @param order  String
      * @return org.springframework.data.domain.Sort
      */
-    private Sort constructsSort(String sortBy, String order) {
+    protected Sort constructsSort(String sortBy, String order) {
         if (order != null && sortBy == null) {
             throw new InvalidRequestException("\"sortBy\" must be specified along with \"order\"");
         }
 
-        if (sortBy != null && Arrays.stream(PersonSearchDTO.class.getDeclaredFields())
+        // check if the field exists
+        if (sortBy != null && Arrays.stream(this.getSearchDtoClass().getDeclaredFields())
                 .noneMatch(field -> field.getName().equals(sortBy))) {
             throw new InvalidRequestException("\"" + sortBy + "\"" + " is not a valid field");
         }
@@ -156,9 +133,9 @@ public class DatabasePersonSearch {
 
         if (order != null) {
             sort = switch (order) {
-                case PersonSearchDTO.ASCENDING -> Sort.by(Sort.Direction.ASC, sortBy);
-                case PersonSearchDTO.DESCENDING -> Sort.by(Sort.Direction.DESC, sortBy);
-                default -> throw new RuntimeException("Invalid order argument");
+                case SearchDTO.ASCENDING -> Sort.by(Sort.Direction.ASC, sortBy);
+                case SearchDTO.DESCENDING -> Sort.by(Sort.Direction.DESC, sortBy);
+                default -> throw new InvalidRequestException("Invalid order argument");
             };
         } else if (sortBy != null) {
             sort = Sort.by(Sort.Direction.ASC, sortBy);
@@ -169,30 +146,36 @@ public class DatabasePersonSearch {
         return sort;
     }
 
-    public List<Order> sortToCriteriaOrders(CriteriaBuilder builder, Root<Person> personRoot) {
+    protected abstract Class<T> getSearchDtoClass();
+
+    public <R> List<Order> sortToCriteriaOrders(CriteriaBuilder builder, Root<R> root) {
         return this.sort.stream().map(sortOrder -> sortOrder.isDescending() ?
-                builder.desc(personRoot.get(sortOrder.getProperty()))
+                builder.desc(root.get(sortOrder.getProperty()))
                 :
-                builder.asc(personRoot.get(sortOrder.getProperty()))
+                builder.asc(root.get(sortOrder.getProperty()))
         ).toList();
     }
 
-    private Pagination constructsPagination(String page, Integer size) {
+    protected Pagination constructsPagination(String page, Integer size) {
         return page == null ? null : new Pagination(page, size);
     }
 
     @Data
     public static class Condition {
-        private String propertyName;
+        private String attributeName;
         private String operator;
         private String value;
         private Expression expressionValue;
 
-        public Condition(String propertyName, String operator, String value) {
-            this.propertyName = propertyName;
+        public Condition(String attributeName, String operator, String value) {
+            this.attributeName = attributeName;
             this.operator = operator;
             this.value = value;
             this.expressionValue = null;
+        }
+
+        public void setExpressionValue(Expression expressionValue) {
+            this.expressionValue = expressionValue;
         }
     }
 

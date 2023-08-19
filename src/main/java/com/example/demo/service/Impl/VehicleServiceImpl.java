@@ -3,12 +3,17 @@ package com.example.demo.service.Impl;
 import com.example.demo.dao.PersonRepository;
 import com.example.demo.dao.VehicleRepository;
 import com.example.demo.dto.request.VehicleCreationDTO;
+import com.example.demo.dto.request.VehicleSearchDTO;
 import com.example.demo.dto.response.CommonResponse;
+import com.example.demo.dto.response.PaginationSuccessResponse;
+import com.example.demo.dto.response.PersonDTO;
 import com.example.demo.dto.response.VehicleDTO;
 import com.example.demo.entity.Person;
 import com.example.demo.entity.Vehicle;
 import com.example.demo.exception.InvalidRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.model.PersonSearchModel;
+import com.example.demo.model.VehicleSearchModel;
 import com.example.demo.service.VehicleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -44,10 +50,19 @@ public class VehicleServiceImpl implements VehicleService {
         ));
     }
 
-//    @Override
-//    public ResponseEntity<CommonResponse> findById(int id) {
-//        return ResponseEntity.ok(new CommonResponse(true, this.vehicleRepository.findById(id)));
-//    }
+    @Override
+    public ResponseEntity<?> findByCriteria(VehicleSearchDTO dto) {
+        VehicleSearchModel vehicleSearch = new VehicleSearchModel(dto);
+        Long counter = dto.getCount() != null
+                ? (dto.getCount().equals(true) ? this.vehicleRepository.countByCriteria(vehicleSearch) : null)
+                : null;
+        List<Vehicle> result = this.vehicleRepository.findByCriteria(vehicleSearch);
+
+        return ResponseEntity.ok(dto.getPage() != null
+                ? new PaginationSuccessResponse<>(true, result.stream().map(VehicleDTO::new).toList(), counter, (long) dto.getSize())
+                : new CommonResponse(true, result.stream().map(VehicleDTO::new).toList())
+        );
+    }
 
     @Override
     public ResponseEntity<CommonResponse> findByIdOrIdNumber(String idNumber) {

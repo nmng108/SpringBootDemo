@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.request.VehicleCreationDTO;
 import com.example.demo.dto.request.VehicleDeletionDTO;
 import com.example.demo.dto.request.VehicleImageUploadDTO;
+import com.example.demo.dto.request.VehicleSearchDTO;
 import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.service.VehicleImageService;
 import com.example.demo.service.VehicleService;
@@ -27,8 +28,8 @@ public class VehicleController {
     }
 
     @GetMapping
-    public ResponseEntity<CommonResponse> fetchAll() {
-        return this.vehicleService.findAll();
+    public ResponseEntity<?> fetchAll(@Valid VehicleSearchDTO searchDTO) {
+        return this.vehicleService.findByCriteria(searchDTO);
     }
 
     @GetMapping({"/{identity}", "/{identity}/"})

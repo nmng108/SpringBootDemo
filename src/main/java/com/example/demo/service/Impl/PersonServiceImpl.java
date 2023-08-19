@@ -8,7 +8,7 @@ import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.dto.response.PaginationSuccessResponse;
 import com.example.demo.dto.response.PersonDTO;
 import com.example.demo.entity.Person;
-import com.example.demo.model.DatabasePersonSearch;
+import com.example.demo.model.PersonSearchModel;
 import com.example.demo.service.PersonService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -50,7 +50,7 @@ public class PersonServiceImpl implements PersonService {
 
     @Override
     public ResponseEntity<?> findByCriteria(PersonSearchDTO dto) {
-        DatabasePersonSearch personSearch = new DatabasePersonSearch(dto);
+        PersonSearchModel personSearch = new PersonSearchModel(dto);
         Long counter = dto.getCount() != null
                 ? (dto.getCount().equals(true) ? this.personRepository.countByCriteria(personSearch) : null)
                 : null;

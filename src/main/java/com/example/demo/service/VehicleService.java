@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.request.VehicleCreationDTO;
+import com.example.demo.dto.request.VehicleSearchDTO;
 import com.example.demo.dto.response.CommonResponse;
 import com.example.demo.entity.Vehicle;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 public interface VehicleService {
     ResponseEntity<CommonResponse> findAll();
 
-//    ResponseEntity<CommonResponse> findById(int id);
+    ResponseEntity<?> findByCriteria(VehicleSearchDTO dto);
 
     ResponseEntity<CommonResponse> findByIdOrIdNumber(String idNumber);
 

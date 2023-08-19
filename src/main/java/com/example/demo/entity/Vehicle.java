@@ -45,7 +45,7 @@ public class Vehicle {
 
     @Column(length = 15)
     private String model;
-    //    @NotBlank(message = "birthDate must not be empty")
+
     private Date acquisitionDate;
 
     @OneToMany(mappedBy = "vehicle", targetEntity = VehicleImage.class)
